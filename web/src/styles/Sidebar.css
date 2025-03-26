@@ -1,0 +1,91 @@
+.sidebar {
+  width: 250px;
+  height: 100vh;
+  background-color: #282c34;
+  color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+  border-right: 1px solid #2d2d2d;
+  position: fixed;
+  left: 0;
+  top: 0;
+}
+
+.sidebar-logo {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.sidebar-logo img {
+  width: 100px;
+  height: auto;
+  border-radius: 50%;
+}
+
+.sidebar-title {
+  font-size: 1.4rem;
+  padding: 0 25px 25px 25px;
+  margin: 0;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid #2d2d2d;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.sidebar-menu {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.sidebar-item {
+  margin: 10px 0;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.sidebar-item:hover {
+  background-color: #2d2d2d;
+}
+
+.sidebar-link {
+  text-decoration: none;
+  color: #ffffff;
+  font-size: 1rem;
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  transition: color 0.3s;
+  border-left: 3px solid transparent;
+}
+
+.sidebar-link:hover {
+  color: #61dafb;
+  background-color: #2d2d2d;
+}
+
+.sidebar-link i {
+  width: 20px;
+  text-align: center;
+  font-size: 16px;
+}
+
+/* Active state */
+.sidebar-item.active {
+  background-color: #2d2d2d;
+  border-left: 3px solid #0084ff;
+}
+
+.sidebar-item.active .sidebar-link {
+  color: #0084ff;
+}
+
+/* Font Awesome CDN (add to your HTML head) */
+@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css');

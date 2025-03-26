@@ -14,27 +14,46 @@ def fetch_unread_emails(request):
     if request.method == 'POST':
         emails = gmail_client.fetch_unread_emails()
         emails_fetched = 0
+        valid_emails = []
+
         for email in emails:
-            # Check if the email with the same gmail_thread_id already exists
+            # Log the email object for debugging
+            logging.debug("Processing email: %s", email)
+
+            # Check if 'threadId' exists in the email object
+            if 'threadId' not in email:
+                logging.error("Missing 'threadId' in email: %s", email)
+                continue
+
+            # Check if the email with the same 'threadId' already exists
             if not EmailQuery.objects.filter(gmail_thread_id=email['threadId']).exists():
-                customer, _ = Customer.objects.get_or_create(email=email['sender'])
+                customer, _ = Customer.objects.get_or_create(email=email.get('sender', 'unknown@example.com'))
                 EmailQuery.objects.create(
                     customer=customer,
-                    subject=email['subject'],
-                    content=email['body'],
+                    subject=email.get('subject', 'No Subject'),
+                    content=email.get('body', ''),
                     received_at=now(),
                     gmail_thread_id=email['threadId']
                 )
                 emails_fetched += 1  # Increment only for new emails
+                valid_emails.append(email)
             else:
                 logging.debug("Duplicate email skipped: Thread ID %s", email['threadId'])
-        return JsonResponse({'status': 'success', 'emails_fetched': emails_fetched})
+
+        return JsonResponse({
+            'status': 'success',
+            'emails_fetched': emails_fetched,
+            'total_unread_emails_fetched': len(valid_emails),
+            'emails': valid_emails
+        })
     return JsonResponse({'error': 'Invalid request method'}, status=400)
 
 @csrf_exempt
 def process_queries(request):
     if request.method == 'POST':
         queries = EmailQuery.objects.filter(is_replied=False)
+        processed_queries = []
+
         for query in queries:
             matched_faq = FAQ.objects.filter(keywords__icontains=query.content).first()
             if matched_faq:
@@ -54,7 +73,14 @@ def process_queries(request):
             else:
                 query.is_complex = True
             query.save()
-        return JsonResponse({'status': 'success', 'processed_queries': queries.count()})
+            processed_queries.append({
+                'id': query.id,
+                'subject': query.subject,
+                'is_replied': query.is_replied,
+                'is_complex': query.is_complex,
+            })
+
+        return JsonResponse({'status': 'success', 'processed_queries': processed_queries})
     return JsonResponse({'error': 'Invalid request method'}, status=400)
 
 @csrf_exempt
@@ -110,4 +136,48 @@ def dashboard_data(request):
             'tasks': tasks,
             'logs': logs
         })
+    return JsonResponse({'error': 'Invalid request method'}, status=400)
+
+from django.core.serializers import serialize
+
+@csrf_exempt
+def fetch_customers(request):
+    if request.method == 'GET':
+        customers = Customer.objects.values('email', 'name')
+        return JsonResponse({'status': 'success', 'customers': list(customers)})
+    return JsonResponse({'error': 'Invalid request method'}, status=400)
+
+@csrf_exempt
+def fetch_unread_emails_from_db(request):
+    if request.method == 'GET':
+        unread_emails = EmailQuery.objects.filter(is_replied=False).values('id', 'subject', 'customer__email', 'received_at')
+        return JsonResponse({'status': 'success', 'emails': list(unread_emails)})
+    return JsonResponse({'error': 'Invalid request method'}, status=400)
+
+@csrf_exempt
+def fetch_email_details(request, id):
+    if request.method == 'GET':
+        try:
+            email = EmailQuery.objects.get(id=id)
+            email_details = {
+                'id': email.id,
+                'subject': email.subject,
+                'sender': email.customer.email,
+                'body': email.content,
+                'received_at': email.received_at,
+            }
+            return JsonResponse({'status': 'success', 'email': email_details})
+        except EmailQuery.DoesNotExist:
+            return JsonResponse({'error': 'Email not found'}, status=404)
+    return JsonResponse({'error': 'Invalid request method'}, status=400)
+
+@csrf_exempt
+def fetch_email_replies(request, id):
+    if request.method == 'GET':
+        try:
+            email_query = EmailQuery.objects.get(id=id)
+            replies = EmailReply.objects.filter(email_query=email_query).values('id', 'content', 'sent_at')
+            return JsonResponse({'status': 'success', 'replies': list(replies)})
+        except EmailQuery.DoesNotExist:
+            return JsonResponse({'error': 'Email not found'}, status=404)
     return JsonResponse({'error': 'Invalid request method'}, status=400)

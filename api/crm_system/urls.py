@@ -25,4 +25,8 @@ urlpatterns = [
     path('api/assign-task/', views.assign_task, name='assign_task'),
     path('api/reply-email/', views.reply_to_email, name='reply_email'),
     path('api/dashboard-data/', views.dashboard_data, name='dashboard_data'),
+    path('api/customers/', views.fetch_customers, name='fetch_customers'),
+    path('api/unread-emails/', views.fetch_unread_emails_from_db, name='fetch_unread_emails_from_db'),
+    path('api/email-details/<int:id>/', views.fetch_email_details, name='fetch_email_details'),
+    path('api/email-replies/<int:id>/', views.fetch_email_replies, name='fetch_email_replies'),
 ]
