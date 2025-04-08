@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import '../styles/DetailsScreen.css';
 import config from '../config/config';
+import Sidebar2 from './Sidebar2';
 
 const DetailsScreen = () => {
   const { id } = useParams();
@@ -82,34 +83,37 @@ const DetailsScreen = () => {
 
   return (
     <div className="details-screen">
-      <header className="chat-header">
-        <h2>Subject: {email.subject}</h2>
-        <p>From: {email.sender}</p>
-      </header>
-      <div className="chat-container">
-        <div className="messages-container">
-          <div className="message received">
-            <div className="message-content">{email.body}</div>
-            <div className="timestamp">{email.received_at || 'N/A'}</div>
-          </div>
-          {replies.map((reply) => (
-            <div key={reply.id} className="message sent">
-              <div className="message-content">{reply.content}</div>
-              <div className="timestamp">{reply.sent_at}</div>
+      <Sidebar2 emailQueryId={id} />
+      <div className="details-content">
+        <header className="chat-header">
+          <h2>Subject: {email.subject}</h2>
+          <p>From: {email.sender}</p>
+        </header>
+        <div className="chat-container">
+          <div className="messages-container">
+            <div className="message received">
+              <div className="message-content">{email.body}</div>
+              <div className="timestamp">{email.received_at || 'N/A'}</div>
             </div>
-          ))}
-        </div>
-        <div className="input-container">
-          <input
-            type="text"
-            placeholder="Type your reply here..."
-            className="message-input"
-            value={replyContent}
-            onChange={(e) => setReplyContent(e.target.value)}
-          />
-          <button className="send-button" onClick={handleReply}>
-            Send
-          </button>
+            {replies.map((reply) => (
+              <div key={reply.id} className="message sent">
+                <div className="message-content">{reply.content}</div>
+                <div className="timestamp">{reply.sent_at}</div>
+              </div>
+            ))}
+          </div>
+          <div className="input-container">
+            <input
+              type="text"
+              placeholder="Type your reply here..."
+              className="message-input"
+              value={replyContent}
+              onChange={(e) => setReplyContent(e.target.value)}
+            />
+            <button className="send-button" onClick={handleReply}>
+              Send
+            </button>
+          </div>
         </div>
       </div>
     </div>

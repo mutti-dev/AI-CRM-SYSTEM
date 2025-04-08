@@ -29,4 +29,9 @@ urlpatterns = [
     path('api/unread-emails/', views.fetch_unread_emails_from_db, name='fetch_unread_emails_from_db'),
     path('api/email-details/<int:id>/', views.fetch_email_details, name='fetch_email_details'),
     path('api/email-replies/<int:id>/', views.fetch_email_replies, name='fetch_email_replies'),
+    path('api/upload-dataset/', views.upload_fine_tuned_dataset, name='upload_fine_tuned_dataset'),
+    path('api/agents/', views.fetch_agents, name='fetch_agents'),
+    path('api/teams/', views.fetch_teams, name='fetch_teams'),
+    path('api/task-details/<int:email_query_id>/', views.fetch_task_details, name='fetch_task_details'),
+    path('api/tasks-with-email-history/', views.fetch_tasks_with_email_history, name='fetch_tasks_with_email_history'),
 ]

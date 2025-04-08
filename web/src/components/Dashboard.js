@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import '../styles/Dashboard.css';
 import config from '../config/config';
+import UploadDataset from './UploadDataset';
 
 const Dashboard = () => {
   const [data, setData] = useState({
@@ -56,10 +57,14 @@ const Dashboard = () => {
           <h3>Total Tasks</h3>
           <p>{data.tasks}</p>
         </div>
-        <div classhe="dashboard-card">
+        <div className="dashboard-card">
           <h3>Total Logs</h3>
           <p>{data.logs}</p>
         </div>
+      </div>
+      <div className="upload-dataset-section">
+        <h3>Upload Fine-Tuned Dataset</h3>
+        <UploadDataset />
       </div>
     </div>
   );

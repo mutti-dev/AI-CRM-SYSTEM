@@ -91,3 +91,12 @@ class EmailLog(models.Model):
 
     def __str__(self):
         return f"{self.action} - {self.timestamp.strftime('%Y-%m-%d %H:%M:%S')}"
+
+class FineTunedDataset(models.Model):
+    name = models.CharField(max_length=255)
+    description = models.TextField(blank=True, null=True)
+    data = models.JSONField()  # Store the fine-tuned dataset as JSON
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.name

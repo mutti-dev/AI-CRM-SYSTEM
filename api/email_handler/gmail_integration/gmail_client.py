@@ -1,5 +1,6 @@
 import os
 import base64
+import re  # Add this import for regular expressions
 from email.mime.text import MIMEText
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -7,6 +8,8 @@ from googleapiclient.discovery import build
 from google.auth.transport.requests import Request  # Add this import
 from bs4 import BeautifulSoup
 import logging
+from email_handler.models import Customer
+
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -64,15 +67,28 @@ class GmailClient:
             emails = []
             for msg in messages:
                 email_data = self.get_email(msg['id'])
-                emails.append(email_data)
 
-                # Mark email as read after fetching
-                self.service.users().messages().modify(
-                    userId='me',
-                    id=msg['id'],
-                    body={'removeLabelIds': ['UNREAD']}
-                ).execute()
-                logging.debug("Marked email with ID %s as read.", msg['id'])
+                # Extract the email address from the sender field
+                sender_email = email_data.get('sender')
+                match = re.search(r'<(.*?)>', sender_email)
+                if match:
+                    sender_email = match.group(1)
+                else:
+                    sender_email = sender_email.strip()  # Handle cases where no name is present
+
+                logging.debug("Extracted sender email: %s", sender_email)  # Log the extracted email
+
+                # Check if the sender exists in the Customer table
+                if Customer.objects.filter(email=sender_email).exists():
+                    emails.append(email_data)
+
+                    # Mark email as read after fetching
+                    self.service.users().messages().modify(
+                        userId='me',
+                        id=msg['id'],
+                        body={'removeLabelIds': ['UNREAD']}
+                    ).execute()
+                    logging.debug("Marked email with ID %s as read.", msg['id'])
 
             return emails
 
@@ -116,6 +132,7 @@ class GmailClient:
                 'sender': sender,
                 'date': date,
                 'body': clean_body.strip()
+                
             }
         except Exception as e:
             logging.error("Error fetching email with ID %s: %s", msg_id, e)

@@ -9,13 +9,7 @@ const Tasks = () => {
   useEffect(() => {
     const fetchTasks = async () => {
       try {
-        const response = await fetch(`${config.API_URL}/api/assign-task/`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({}), // Add any required payload here
-        });
+        const response = await fetch(`${config.API_URL}/api/tasks-with-email-history/`);
         if (!response.ok) {
           throw new Error('Failed to fetch tasks');
         }
@@ -41,13 +35,35 @@ const Tasks = () => {
       {tasks.length === 0 ? (
         <p>No tasks available.</p>
       ) : (
-        <ul>
-          {tasks.map((task) => (
-            <li key={task.id}>
-              <strong>{task.title}</strong>: {task.description}
-            </li>
-          ))}
-        </ul>
+        tasks.map((task) => (
+          <div key={task.id} className="task-card">
+            <h3>{task.title}</h3>
+            <p><strong>Description:</strong> {task.description}</p>
+            <p><strong>Status:</strong> {task.status}</p>
+            <p><strong>Due Date:</strong> {task.due_date || 'N/A'}</p>
+            <p><strong>Assigned Agent:</strong> {task.assigned_agent || 'N/A'}</p>
+            <p><strong>Assigned Team:</strong> {task.assigned_team || 'N/A'}</p>
+            <h4>Email Query</h4>
+            <p><strong>Subject:</strong> {task.email_query.subject}</p>
+            <p><strong>Content:</strong> {task.email_query.content}</p>
+            <p><strong>Customer Email:</strong> {task.email_query.customer_email}</p>
+            <p><strong>Received At:</strong> {task.email_query.received_at}</p>
+            <h4>Email History</h4>
+            {task.email_history.length === 0 ? (
+              <p>No email history available.</p>
+            ) : (
+              <ul>
+                {task.email_history.map((email) => (
+                  <li key={email.id}>
+                    <p><strong>Responder:</strong> {email.responder__user__first_name} {email.responder__user__last_name}</p>
+                    <p><strong>Content:</strong> {email.content}</p>
+                    <p><strong>Sent At:</strong> {email.sent_at}</p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        ))
       )}
     </div>
   );

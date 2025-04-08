@@ -2,8 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import '../styles/MuiTable.css';
+import '../styles/FetchEmailsButton.css';
 import config from '../config/config';
 import SearchBar from './SearchBar';
+import FetchEmailsButton from './FetchEmailsButton';
 
 const Queries = () => {
   const navigate = useNavigate();
@@ -12,23 +14,23 @@ const Queries = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchUnreadEmails = async () => {
-      try {
-        const response = await fetch(`${config.API_URL}/api/unread-emails/`);
-        if (!response.ok) {
-          throw new Error('Failed to fetch unread emails');
-        }
-        const result = await response.json();
-        setEmails(result.emails || []);
-        setFilteredEmails(result.emails || []);
-      } catch (error) {
-        console.error('Error fetching unread emails:', error);
-      } finally {
-        setLoading(false);
+  const fetchUnreadEmails = async () => {
+    try {
+      const response = await fetch(`${config.API_URL}/api/unread-emails/`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch unread emails');
       }
-    };
+      const result = await response.json();
+      setEmails(result.emails || []);
+      setFilteredEmails(result.emails || []);
+    } catch (error) {
+      console.error('Error fetching unread emails:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchUnreadEmails();
   }, []);
 
@@ -44,13 +46,21 @@ const Queries = () => {
     navigate(`/details/${id}`);
   };
 
+  const handleEmailsFetched = (newEmails) => {
+    setEmails((prevEmails) => [...newEmails, ...prevEmails]);
+    setFilteredEmails((prevEmails) => [...newEmails, ...prevEmails]);
+  };
+
   if (loading) {
     return <div className="table-container">Loading...</div>;
   }
 
   return (
     <div>
-      <SearchBar searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
+      <div className="queries-header">
+        <SearchBar searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
+        <FetchEmailsButton onEmailsFetched={handleEmailsFetched} />
+      </div>
       <TableContainer component={Paper} className="table-container">
         <Table>
           <TableHead>
