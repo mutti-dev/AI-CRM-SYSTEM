@@ -10,8 +10,11 @@ import Settings from './components/Settings';
 import UploadDataset from './components/UploadDataset';
 import { Routes, Route, useLocation } from 'react-router-dom';
 import TicketTabs from './components/TicketTabs';
+import { useParams } from 'react-router-dom';
 
 function App() {
+  const { id } = useParams();
+  console.log("id from APP", id);
   const location = useLocation();
   const [isSidebarCollapsed, setSidebarCollapsed] = useState(false);
 
@@ -20,7 +23,7 @@ function App() {
       {/* <TicketTabs /> */}
       <div className="App-container">
         {location.pathname.startsWith('/details') ? (
-          <Sidebar2 onToggle={setSidebarCollapsed} />
+          <Sidebar2 onToggle={setSidebarCollapsed}  />
         ) : (
           <Sidebar onToggle={setSidebarCollapsed} />
         )}

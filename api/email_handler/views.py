@@ -17,6 +17,7 @@ from .genai import client  # Import the GenAI client
 # Load environment variables
 load_dotenv()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 
 if not GEMINI_API_KEY:
     raise ValueError("GEMINI_API_KEY environment variable is not set.")
@@ -233,74 +234,91 @@ def process_queries(request):
 @csrf_exempt
 def assign_task(request):
     if request.method == 'POST':
-        data = json.loads(request.body)
-        print("data", data)
-
-        # Parse and make the due_date timezone-aware
-        due_date = None
-        if data.get('due_date'):
-            try:
-                naive_due_date = datetime.strptime(data['due_date'], '%Y-%m-%d')
-                due_date = make_aware(naive_due_date)  # Convert to timezone-aware datetime
-            except ValueError as e:
-                logging.error(f"Invalid due_date format: {e}")
-
-        email_query = EmailQuery.objects.get(id=data['email_query_id'])
-        task = Task.objects.create(
-            email_query=email_query,
-            title=data['title'],
-            description=data['description'],
-            assigned_team_id=data.get('assigned_team_id'),
-            assigned_agent_id=data.get('assigned_agent_id'),
-            due_date=due_date
-        )
-
-        # Send task details to Microsoft Teams using a webhook
-        # https://outlook.office.com/webhook/your-correct-webhook-url
         try:
-            webhook_url = "https://pern.webhook.office.com/webhookb2/b6bdde7c-c22b-46b5-bf7a-d4a02cc0daf8@75df096c-8b72-48e4-9b91-cbf79d87ee3a/IncomingWebhook/417f836e910844b282c2ce58e84b23ce/c8dba7ff-6bfd-4f06-92f2-fa8f96b5e923/V2jUtKRMbzuWaUuFvhaYcccWVEUY6kDSixc-WWxk5WqPk1"  # Corrected webhook URL
-            assigned_agent = Agent.objects.get(id=data.get('assigned_agent_id')).user.get_full_name() if data.get('assigned_agent_id') else "N/A"
-            assigned_team = Team.objects.get(id=data.get('assigned_team_id')).name if data.get('assigned_team_id') else "N/A"
+            # Log the raw request body for debugging
+            logging.debug("Raw request body: %s", request.body)
 
-            # Handle None for due_date
-            due_date_str = task.due_date.strftime('%Y-%m-%d') if task.due_date else "N/A"
+            data = json.loads(request.body)
 
-            message = {
-                "title": "New Task Assigned",
-                "text": f"A new task has been assigned to **{assigned_agent if assigned_agent != 'N/A' else assigned_team}**.",
-                "sections": [
-                    {
-                        "activityTitle": f"**Task Title:** {task.title}",
-                        "activitySubtitle": f"**Description:** {task.description}",
-                        "facts": [
-                            {"name": "Assigned Agent:", "value": assigned_agent},
-                            {"name": "Assigned Team:", "value": assigned_team},
-                            {"name": "Due Date:", "value": due_date_str},
-                            {"name": "Email Query Subject:", "value": email_query.subject},
-                        ],
-                        "markdown": True
-                    }
-                ],
-                "potentialAction": [
-                    {
-                        "@type": "OpenUri",
-                        "name": "View Task",
-                        "targets": [
-                            {"os": "default", "uri": f"http://localhost:3000/details/{task.id}"}
-                        ]
-                    }
-                ]
-            }
+            # Ensure 'email_query_id' exists in the request data
+            if 'email_query_id' not in data:
+                logging.error("'email_query_id' is missing in the request data.")
+                return JsonResponse({'error': "'email_query_id' is required"}, status=400)
 
-            logging.debug(f"Webhook URL: {webhook_url}")
-            logging.debug(f"Payload: {message}")
-            response = requests.post(webhook_url, json=message)
-            if response.status_code != 200:
-                logging.error(f"Failed to send message to Teams: {response.status_code}, {response.text}")
+            # Parse and make the due_date timezone-aware
+            due_date = None
+            if data.get('due_date'):
+                try:
+                    naive_due_date = datetime.strptime(data['due_date'], '%Y-%m-%d')
+                    due_date = make_aware(naive_due_date)  # Convert to timezone-aware datetime
+                except ValueError as e:
+                    logging.error(f"Invalid due_date format: {e}")
+                    return JsonResponse({'error': 'Invalid due_date format'}, status=400)
+
+            email_query = EmailQuery.objects.get(id=data['email_query_id'])
+            task = Task.objects.create(
+                email_query=email_query,
+                title=data['title'],
+                description=data['description'],
+                assigned_team_id=data.get('assigned_team_id'),
+                assigned_agent_id=data.get('assigned_agent_id'),
+                due_date=due_date
+            )
+
+            # Send task details to Microsoft Teams using a webhook
+            try:
+                webhook_url = WEBHOOK_URL  # Ensure this is set in your environment variables
+                assigned_agent = Agent.objects.get(id=data.get('assigned_agent_id')).user.get_full_name() if data.get('assigned_agent_id') else "N/A"
+                assigned_team = Team.objects.get(id=data.get('assigned_team_id')).name if data.get('assigned_team_id') else "N/A"
+
+                # Handle None for due_date
+                due_date_str = task.due_date.strftime('%Y-%m-%d') if task.due_date else "N/A"
+
+                message = {
+                    "title": "New Task Assigned",
+                    "text": f"A new task has been assigned to **{assigned_agent if assigned_agent != 'N/A' else assigned_team}**.",
+                    "sections": [
+                        {
+                            "activityTitle": f"**Task Title:** {task.title}",
+                            "activitySubtitle": f"**Description:** {task.description}",
+                            "facts": [
+                                {"name": "Assigned Agent:", "value": assigned_agent},
+                                {"name": "Assigned Team:", "value": assigned_team},
+                                {"name": "Due Date:", "value": due_date_str},
+                                {"name": "Email Query Subject:", "value": email_query.subject},
+                            ],
+                            "markdown": True
+                        }
+                    ],
+                    "potentialAction": [
+                        {
+                            "@type": "OpenUri",
+                            "name": "View Task",
+                            "targets": [
+                                {"os": "default", "uri": f"http://localhost:3000/details/{task.id}"}
+                            ]
+                        }
+                    ]
+                }
+
+                logging.debug(f"Webhook URL: {webhook_url}")
+                logging.debug(f"Payload: {message}")
+                response = requests.post(webhook_url, json=message)
+                if response.status_code != 200:
+                    logging.error(f"Failed to send message to Teams: {response.status_code}, {response.text}")
+            except Exception as e:
+                logging.error(f"Error sending task details to Teams: {e}")
+
+            return JsonResponse({'status': 'success', 'task_id': task.id})
+        except EmailQuery.DoesNotExist:
+            logging.error("EmailQuery not found for the provided 'email_query_id'.")
+            return JsonResponse({'error': 'EmailQuery not found'}, status=404)
+        except json.JSONDecodeError as e:
+            logging.error("Invalid JSON in request body: %s", e)
+            return JsonResponse({'error': 'Invalid JSON format'}, status=400)
         except Exception as e:
-            logging.error(f"Error sending task details to Teams: {e}")
-
-        return JsonResponse({'status': 'success', 'task_id': task.id})
+            logging.error(f"Error in assign_task: {e}")
+            return JsonResponse({'error': 'An error occurred while assigning the task'}, status=500)
     return JsonResponse({'error': 'Invalid request method'}, status=400)
 
 @csrf_exempt

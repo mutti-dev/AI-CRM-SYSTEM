@@ -7,6 +7,7 @@ import { formatTime } from '../utils/formatTime';
 
 const DetailsScreen = () => {
   const { id } = useParams();
+  console.log("id", id);
   const [email, setEmail] = useState(null);
   const [replies, setReplies] = useState([]); // Initialize as an empty array
   const [replyContent, setReplyContent] = useState('');
@@ -84,7 +85,7 @@ const DetailsScreen = () => {
 
   return (
     <div className="details-screen">
-      {/* <Sidebar2 emailQueryId={id} /> */}
+      <Sidebar2 emailQueryId={id} />
       <div className="details-content">
         <header className="chat-header">
           <h2>Subject: {email.subject}</h2>

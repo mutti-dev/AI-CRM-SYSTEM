@@ -137,11 +137,16 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # CORS configuration
 CORS_ALLOWED_ORIGINS = [
-    'http://localhost:3000',  # Add your frontend URL here
+    'http://localhost:3000',  # Existing frontend URL
+    'http://localhost:3001',  # Add this frontend URL
+    'http://192.168.137.90:3001',  # Add this frontend URL
 ]
 
 # Optionally, allow all origins (not recommended for production)
 # CORS_ALLOW_ALL_ORIGINS = True
+
+# Ensure CORS headers are included in responses
+CORS_ALLOW_CREDENTIALS = True
 
 # Celery settings
 CELERY_BROKER_URL = 'redis://localhost:6379/0'  # Redis as the message broker

@@ -3,10 +3,12 @@ import '../styles/Sidebar2.css';
 import config from '../config/config';
 
 const Sidebar2 = ({ emailQueryId, onToggle }) => {
+  console.log("emailQueryId", emailQueryId);
    const [collapsed, setCollapsed] = useState(false); // State to manage collapse
   const [agents, setAgents] = useState([]);
   const [teams, setTeams] = useState([]);
   const [formData, setFormData] = useState({
+    email_query_id: emailQueryId,
     title: '',
     description: '',
     assignedAgentId: '',
@@ -80,7 +82,7 @@ const Sidebar2 = ({ emailQueryId, onToggle }) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          email_query_id: emailQueryId,
+          email_query_id: formData.email_query_id,
           title: formData.title,
           description: formData.description,
           assigned_team_id: formData.assignedTeamId,
@@ -110,7 +112,9 @@ const Sidebar2 = ({ emailQueryId, onToggle }) => {
 
   const handleToggle = () => {
     setCollapsed(!collapsed);
-    onToggle(!collapsed); // Notify parent about the collapsed state
+    if (onToggle) {
+      onToggle(!collapsed); // Call onToggle only if it is defined
+    }
   };
 
 
