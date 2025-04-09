@@ -12,6 +12,7 @@ import os
 import requests  # Add this import for sending HTTP requests
 from datetime import datetime
 import re  
+from .genai import client  # Import the GenAI client
 
 # Load environment variables
 load_dotenv()
@@ -89,16 +90,23 @@ def fetch_unread_emails(request):
             # Extract the email address from the sender field
             sender_email = email.get('sender')
             match = re.search(r'<(.*?)>', sender_email)
-            if (match):
+            if match:
                 sender_email = match.group(1)
             else:
-                sender_email = sender_email.strip()  # Handle cases where no name is present
+                sender_email = sender_email.strip()
 
-            logging.debug("Extracted sender email: %s", sender_email)  # Log the extracted email
+            logging.debug("Extracted sender email: %s", sender_email)
 
             # Check if the sender exists in the Customer table
             customer = Customer.objects.filter(email=sender_email).first()
             if customer:
+                # Check if the email thread already exists
+                existing_query = EmailQuery.objects.filter(gmail_thread_id=email['threadId']).first()
+                if existing_query:
+                    logging.info("Email thread already exists: %s", email['threadId'])
+                    continue
+
+                # Create a new EmailQuery
                 EmailQuery.objects.create(
                     customer=customer,
                     subject=email.get('subject', 'No Subject'),
@@ -109,12 +117,36 @@ def fetch_unread_emails(request):
                 emails_fetched += 1
                 valid_emails.append(email)
 
-                # Automatically send a reply with the message "Noted"
+                # Automatically send a reply using GenAI
                 try:
+                    # Fetch previous email content in the thread for context
+                    previous_emails = EmailQuery.objects.filter(gmail_thread_id=email['threadId']).values_list('content', flat=True)
+                    thread_context = "\n\n".join(previous_emails)
+
+                    # Generate a professional and friendly reply using GenAI
+                    response = client.models.generate_content(
+                        model="gemini-2.0-flash",
+                        contents=f"""
+                        You are AI Mutti, a friendly and professional assistant from MaxRemind. 
+                        Your job is to generate well-written, polite, and helpful email replies.
+                        Respond to the following email in a clear, concise, and respectful tone. 
+                        Keep the language simple, professional, and approachable—neither too formal nor too casual. 
+                        Always make the sender feel acknowledged, understood, and supported.
+                        Make sure the reply sounds human, empathetic, and solution-oriented. 
+                        Avoid robotic phrasing or overly complex language.
+                        Here is the email thread context:
+                        \"\"\"{thread_context}\"\"\"
+                        Here is the latest email content:
+                        \"\"\"{email.get('body', '')}\"\"\"
+                        Write a well-formatted and thoughtful reply:
+                        """
+                    )
+                    reply_content = response.text
+
                     gmail_message_id = gmail_client.send_reply(
                         to_email=sender_email,
                         subject=f"Re: {email.get('subject', 'No Subject')}",
-                        body="Noted",
+                        body=reply_content,
                         thread_id=email['threadId']
                     )
                     logging.info("Auto-reply sent for email: %s", email['threadId'])
@@ -122,7 +154,7 @@ def fetch_unread_emails(request):
                     # Save the reply in EmailReply
                     EmailReply.objects.create(
                         email_query=EmailQuery.objects.get(gmail_thread_id=email['threadId']),
-                        content="Noted",
+                        content=reply_content,
                         sent_at=now(),
                         gmail_message_id=gmail_message_id
                     )
@@ -145,25 +177,45 @@ def process_queries(request):
         queries = EmailQuery.objects.filter(is_replied=False)
         processed_queries = []
 
+        # Fetch predefined company information (FAQs or other data)
+        company_info = FAQ.objects.values_list('keywords', 'answer')
+
         for query in queries:
             try:
-                response = genai_client.models.generate_content(
-                    model="gemini-2.0-flash",
-                    contents=query.content
-                )
-                reply_content = response.text
+                # Check if the query matches any predefined company information
+                matched = False
+                for keywords, answer in company_info:
+                    keyword_list = [kw.strip().lower() for kw in keywords.split(',')]
+                    if any(kw in query.content.lower() for kw in keyword_list):
+                        # If a match is found, use the predefined answer
+                        reply_content = answer
+                        matched = True
+                        break
 
+                if not matched:
+                    # If no match is found, send a generic acknowledgment response
+                    reply_content = (
+                        "Thank you for reaching out to us. "
+                        "We have received your query and will get back to you shortly."
+                    )
+
+                # Send the reply via Gmail
+                gmail_message_id = gmail_client.send_reply(
+                    to_email=query.customer.email,
+                    subject=f"Re: {query.subject}",
+                    body=reply_content,
+                    thread_id=query.gmail_thread_id
+                )
+
+                # Save the reply in the database
                 EmailReply.objects.create(
                     email_query=query,
                     content=reply_content,
                     sent_at=now(),
-                    gmail_message_id=gmail_client.send_reply(
-                        to_email=query.customer.email,
-                        subject=f"Re: {query.subject}",
-                        body=reply_content,
-                        thread_id=query.gmail_thread_id
-                    )
+                    gmail_message_id=gmail_message_id
                 )
+
+                # Mark the query as replied
                 query.is_replied = True
                 query.save()
 
@@ -300,7 +352,13 @@ def fetch_customers(request):
 @csrf_exempt
 def fetch_unread_emails_from_db(request):
     if request.method == 'GET':
-        unread_emails = EmailQuery.objects.filter(is_replied=False).values('id', 'subject', 'customer__email', 'received_at')
+        unread_emails = EmailQuery.objects.filter(is_replied=False).values(
+            'id', 
+            'subject', 
+            'customer__email', 
+            'customer__name',  # Include customer name
+            'received_at'
+        )
         return JsonResponse({'status': 'success', 'emails': list(unread_emails)})
     return JsonResponse({'error': 'Invalid request method'}, status=400)
 

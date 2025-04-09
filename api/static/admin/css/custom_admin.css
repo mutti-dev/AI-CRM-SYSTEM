@@ -1,0 +1,145 @@
+/* General body styling */
+body {
+  background-color: #f4f9ff; /* Light blue background */
+  color: #333; /* Dark text for contrast */
+  font-family: 'Roboto', sans-serif;
+}
+
+/* Header styling */
+#header {
+  background-color: #007bff; /* Blue header */
+  color: #ffffff;
+  padding: 10px 20px;
+  border-bottom: 2px solid #0056b3; /* Darker blue border */
+}
+
+#header h1 a {
+  color: #ffffff;
+  text-decoration: none;
+  font-size: 1.8rem;
+  font-weight: bold;
+}
+
+#header h1 a:hover {
+  color: #d9ecff; /* Lighter blue on hover */
+}
+
+/* Navigation bar styling */
+#nav-global {
+  background-color: #0056b3; /* Dark blue navigation bar */
+  padding: 10px;
+  text-align: right;
+}
+
+#nav-global a {
+  color: #ffffff;
+  text-decoration: none;
+  font-weight: bold;
+  margin-left: 15px;
+}
+
+#nav-global a:hover {
+  color: #d9ecff; /* Lighter blue on hover */
+}
+
+/* Dashboard module styling */
+.dashboard-module {
+  background-color: #ffffff; /* White background for modules */
+  border: 1px solid #d9ecff; /* Light blue border */
+  border-radius: 8px;
+  padding: 15px;
+  margin: 10px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.dashboard-module:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 6px 10px rgba(0, 0, 0, 0.15);
+}
+
+.dashboard-module h3 {
+  color: #007bff; /* Blue text for module titles */
+}
+
+/* Button styling */
+button, .button {
+  background-color: #007bff;
+  color: #ffffff;
+  border: none;
+  border-radius: 5px;
+  padding: 10px 15px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+button:hover, .button:hover {
+  background-color: #0056b3;
+  transform: translateY(-2px);
+}
+
+button:active, .button:active {
+  transform: translateY(0);
+}
+
+/* Table styling */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 20px 0;
+}
+
+table th {
+  background-color: #007bff;
+  color: #ffffff;
+  padding: 10px;
+  text-align: left;
+}
+
+table td {
+  background-color: #ffffff;
+  color: #333;
+  padding: 10px;
+  border-bottom: 1px solid #d9ecff;
+}
+
+table tr:hover td {
+  background-color: #f4f9ff; /* Light blue on hover */
+}
+
+/* Footer styling */
+#footer {
+  background-color: #0056b3;
+  color: #ffffff;
+  text-align: center;
+  padding: 10px;
+  margin-top: 20px;
+}
+
+#footer a {
+  color: #d9ecff;
+  text-decoration: none;
+}
+
+#footer a:hover {
+  color: #ffffff;
+}
+
+
+#branding {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+#company-logo {
+  height: 50px;
+  width: auto;
+}
+
+#site-name {
+  font-size: 1.8rem;
+  color: #ffffff;
+  text-decoration: none;
+}

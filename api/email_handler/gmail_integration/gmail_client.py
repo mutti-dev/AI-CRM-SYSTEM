@@ -161,7 +161,7 @@ class GmailClient:
                 userId='me',
                 body={
                     'raw': raw_message,
-                    'threadId': thread_id
+                    'threadId': thread_id  # Ensure the reply is sent in the same thread
                 }
             ).execute()
 

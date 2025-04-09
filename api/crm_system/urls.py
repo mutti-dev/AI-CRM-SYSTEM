@@ -18,6 +18,11 @@ from django.contrib import admin
 from django.urls import path
 from email_handler import views
 
+# Customize admin site headers
+admin.site.site_header = "MaxRemind CRM Admin"
+admin.site.site_title = "MaxRemind CRM Portal"
+admin.site.index_title = "Welcome to MaxRemind CRM Admin Panel"
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/fetch-emails/', views.fetch_unread_emails, name='fetch_emails'),
@@ -34,4 +39,5 @@ urlpatterns = [
     path('api/teams/', views.fetch_teams, name='fetch_teams'),
     path('api/task-details/<int:email_query_id>/', views.fetch_task_details, name='fetch_task_details'),
     path('api/tasks-with-email-history/', views.fetch_tasks_with_email_history, name='fetch_tasks_with_email_history'),
+    path('api/tickets/<int:ticket_id>/', views.fetch_email_details, name='get_ticket'),
 ]

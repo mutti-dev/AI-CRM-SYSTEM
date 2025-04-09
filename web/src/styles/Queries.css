@@ -38,3 +38,50 @@
   letter-spacing: 0.5px;
   display: inline-block;
 }
+
+
+.filters-container {
+  display: flex;
+  gap: 16px;
+  padding: 16px;
+  background-color: #1a1a1a;
+  margin: 0 16px 16px;
+  border-radius: 8px;
+}
+
+.filters-container .MuiTextField-root {
+  background-color: #2d2d2d;
+  border-radius: 4px;
+}
+
+.filters-container .MuiOutlinedInput-root {
+  color: #fff;
+}
+
+.filters-container .MuiInputLabel-root {
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+
+.filters-container .MuiOutlinedInput-notchedOutline {
+  border-color: rgba(255, 255, 255, 0.3) !important;
+}
+
+.filters-container .MuiSelect-icon {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.filters-container .MuiMenuItem-root {
+  color: #fff;
+  background-color: #2d2d2d;
+}
+
+.filters-container .MuiMenuItem-root:hover {
+  background-color: #3d3d3d !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .filters-container {
+    flex-direction: column;
+  }
+}

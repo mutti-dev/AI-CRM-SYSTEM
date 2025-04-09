@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import config from '../config/config';
+import Refresh from '../assets/svgs/Refresh';
 
 const FetchEmailsButton = ({ onEmailsFetched }) => {
   const [loading, setLoading] = useState(false);
@@ -15,27 +16,39 @@ const FetchEmailsButton = ({ onEmailsFetched }) => {
       }
       const result = await response.json();
       onEmailsFetched(result.emails || []);
-      alert(`Fetched ${result.emails_fetched} new unread emails.`);
+      console.log(`Fetched ${result.emails_fetched} new unread emails.`);
     } catch (error) {
       console.error('Error fetching unread emails:', error);
-      alert('Failed to fetch unread emails.');
     } finally {
       setLoading(false);
     }
   };
 
+  useEffect(() => {
+    // Set an interval to fetch emails every 5 minutes (300000 ms)
+    const interval = setInterval(() => {
+      handleFetchEmails();
+    }, 40000);
+
+    // Cleanup the interval on component unmount
+    return () => clearInterval(interval);
+  }, []); // Empty dependency array ensures this runs only once on mount
+
   return (
-    <button
+    <div
       onClick={handleFetchEmails}
-      className="fetch-emails-button"
-      disabled={loading}
+      className="fetch-emails-icon"
+      style={{ cursor: loading ? 'not-allowed' : 'pointer' }}
     >
-      {loading ? (
-        <span className="spinner"></span>
-      ) : (
-        'Fetch Unread Emails'
-      )}
-    </button>
+      <Refresh
+        style={{
+          width: '30px',
+          height: '30px',
+          fill: loading ? '#ccc' : '#0084ff',
+          animation: loading ? 'spin 1s linear infinite' : 'none',
+        }}
+      />
+    </div>
   );
 };
 

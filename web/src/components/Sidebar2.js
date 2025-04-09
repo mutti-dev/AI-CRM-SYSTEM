@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import '../styles/Sidebar2.css';
 import config from '../config/config';
 
-const Sidebar2 = ({ emailQueryId }) => {
+const Sidebar2 = ({ emailQueryId, onToggle }) => {
+   const [collapsed, setCollapsed] = useState(false); // State to manage collapse
   const [agents, setAgents] = useState([]);
   const [teams, setTeams] = useState([]);
   const [formData, setFormData] = useState({
@@ -32,6 +33,7 @@ const Sidebar2 = ({ emailQueryId }) => {
         console.error('Error fetching agents or teams:', error);
       }
     };
+    
 
     const fetchTaskDetails = async () => {
       try {
@@ -106,8 +108,21 @@ const Sidebar2 = ({ emailQueryId }) => {
     }
   };
 
+  const handleToggle = () => {
+    setCollapsed(!collapsed);
+    onToggle(!collapsed); // Notify parent about the collapsed state
+  };
+
+
   return (
     <div className="sidebar2">
+      {/* Back link to /queries */}
+      <a href="/queries" className="sidebar2-back-link">
+        ← Back
+      </a>
+      <button className="collapse-button" onClick={handleToggle}>
+        {collapsed ? '>' : '<'}
+      </button>
       <h2 className="sidebar2-title">Assign Task</h2>
       <form onSubmit={handleSubmit} className="assign-task-form">
         <div className="form-group">

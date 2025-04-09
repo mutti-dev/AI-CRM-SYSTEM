@@ -44,6 +44,21 @@
   background-color: #444;
 }
 
+.sidebar2-back-link {
+  display: inline-block;
+  margin-bottom: 15px;
+  color: #4dabf7;
+  text-decoration: none;
+  font-size: 1rem;
+  font-weight: bold;
+  transition: color 0.3s ease;
+}
+
+.sidebar2-back-link:hover {
+  color: #339af0;
+  text-decoration: underline;
+}
+
 .assign-task-form {
   display: flex;
   flex-direction: column;

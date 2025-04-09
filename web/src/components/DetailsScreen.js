@@ -3,11 +3,12 @@ import { useParams } from 'react-router-dom';
 import '../styles/DetailsScreen.css';
 import config from '../config/config';
 import Sidebar2 from './Sidebar2';
+import { formatTime } from '../utils/formatTime';
 
 const DetailsScreen = () => {
   const { id } = useParams();
   const [email, setEmail] = useState(null);
-  const [replies, setReplies] = useState([]);
+  const [replies, setReplies] = useState([]); // Initialize as an empty array
   const [replyContent, setReplyContent] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -19,7 +20,7 @@ const DetailsScreen = () => {
           throw new Error('Failed to fetch email details');
         }
         const result = await response.json();
-        setEmail(result.email);
+        setEmail(result.email || null); // Ensure email is set to null if not found
       } catch (error) {
         console.error('Error fetching email details:', error);
       }
@@ -32,7 +33,7 @@ const DetailsScreen = () => {
           throw new Error('Failed to fetch email replies');
         }
         const result = await response.json();
-        setReplies(result.replies || []);
+        setReplies(result.replies || []); // Ensure replies is an empty array if not found
       } catch (error) {
         console.error('Error fetching email replies:', error);
       }
@@ -62,11 +63,11 @@ const DetailsScreen = () => {
       if (!response.ok) {
         throw new Error('Failed to send reply');
       }
+      const result = await response.json();
       alert('Reply sent successfully!');
       setReplyContent('');
       // Refresh replies after sending
-      const result = await response.json();
-      setReplies((prevReplies) => [...prevReplies, result.reply]);
+      setReplies((prevReplies) => [...prevReplies, result.reply || {}]); // Ensure reply is valid
     } catch (error) {
       console.error('Error sending reply:', error);
       alert('Failed to send reply');
@@ -83,7 +84,7 @@ const DetailsScreen = () => {
 
   return (
     <div className="details-screen">
-      <Sidebar2 emailQueryId={id} />
+      {/* <Sidebar2 emailQueryId={id} /> */}
       <div className="details-content">
         <header className="chat-header">
           <h2>Subject: {email.subject}</h2>
@@ -93,13 +94,15 @@ const DetailsScreen = () => {
           <div className="messages-container">
             <div className="message received">
               <div className="message-content">{email.body}</div>
-              <div className="timestamp">{email.received_at || 'N/A'}</div>
+              <div className="timestamp">{formatTime(email.received_at)}</div>
             </div>
-            {replies.map((reply) => (
-              <div key={reply.id} className="message sent">
-                <div className="message-content">{reply.content}</div>
-                <div className="timestamp">{reply.sent_at}</div>
-              </div>
+            {replies.map((reply, index) => (
+              reply && reply.content ? ( // Validate reply and content before rendering
+                <div key={index} className="message sent">
+                  <div className="message-content">{reply.content}</div>
+                  <div className="timestamp">{formatTime(reply.sent_at)}</div>
+                </div>
+              ) : null
             ))}
           </div>
           <div className="input-container">
