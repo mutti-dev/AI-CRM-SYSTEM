@@ -267,7 +267,8 @@ def assign_task(request):
 
             # Send task details to Microsoft Teams using a webhook
             try:
-                webhook_url = WEBHOOK_URL  # Ensure this is set in your environment variables
+                # webhook_url = WEBHOOK_URL
+                webhook_url = "https://pern.webhook.office.com/webhookb2/b6bdde7c-c22b-46b5-bf7a-d4a02cc0daf8@75df096c-8b72-48e4-9b91-cbf79d87ee3a/IncomingWebhook/f8eb4c6e70e4455f93aa38aee66192c0/c8dba7ff-6bfd-4f06-92f2-fa8f96b5e923/V2bpRDyrGmWZHn2QJfTpZWjPY-pcpdqXKPAYOU1Mn3ED81"
                 assigned_agent = Agent.objects.get(id=data.get('assigned_agent_id')).user.get_full_name() if data.get('assigned_agent_id') else "N/A"
                 assigned_team = Team.objects.get(id=data.get('assigned_team_id')).name if data.get('assigned_team_id') else "N/A"
 
