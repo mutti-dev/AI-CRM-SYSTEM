@@ -27,25 +27,25 @@ gmail_client = GmailClient()
 
 GRAPH_API_BASE_URL = "https://graph.microsoft.com/v1.0"
 
-def get_graph_access_token():
-    """
-    Authenticate with Microsoft Graph and get an access token.
-    """
-    tenant_id = "your-tenant-id"  # Replace with your Azure tenant ID
-    client_id = "your-client-id"  # Replace with your Azure app client ID
-    client_secret = "your-client-secret"  # Replace with your Azure app client secret
-    token_url = f"https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token"
+# def get_graph_access_token():
+#     """
+#     Authenticate with Microsoft Graph and get an access token.
+#     """
+#     tenant_id = "your-tenant-id"  # Replace with your Azure tenant ID
+#     client_id = "your-client-id"  # Replace with your Azure app client ID
+#     client_secret = "your-client-secret"  # Replace with your Azure app client secret
+#     token_url = f"https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token"
 
-    data = {
-        "grant_type": "client_credentials",
-        "client_id": client_id,
-        "client_secret": client_secret,
-        "scope": "https://graph.microsoft.com/.default",
-    }
+#     data = {
+#         "grant_type": "client_credentials",
+#         "client_id": client_id,
+#         "client_secret": client_secret,
+#         "scope": "https://graph.microsoft.com/.default",
+#     }
 
-    response = requests.post(token_url, data=data)
-    response.raise_for_status()
-    return response.json()["access_token"]
+#     response = requests.post(token_url, data=data)
+#     response.raise_for_status()
+#     return response.json()["access_token"]
 
 def send_task_to_teams(access_token, team_id, channel_id, task_details):
     """

@@ -9,6 +9,8 @@ const DetailsScreen = () => {
   const { id } = useParams();
   console.log("id", id);
   const [email, setEmail] = useState(null);
+
+  console.log("body", email);
   const [replies, setReplies] = useState([]); // Initialize as an empty array
   const [replyContent, setReplyContent] = useState('');
   const [loading, setLoading] = useState(true);
