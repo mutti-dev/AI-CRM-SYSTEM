@@ -2,7 +2,7 @@ from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.timezone import now, make_aware
-from .models import EmailQuery, FAQ, Task, EmailReply, EmailLog, Customer, FineTunedDataset, Agent, Team
+from .models import EmailQuery, FAQ, Task, EmailReply, EmailLog, Customer, FineTunedDataset, Agent, Team, WhatsAppMessage, WhatsAppReply
 from .gmail_integration.gmail_client import GmailClient
 import json
 import logging
@@ -13,6 +13,7 @@ import requests  # Add this import for sending HTTP requests
 from datetime import datetime
 import re  
 from .genai import client  # Import the GenAI client
+from .whatsapp_integration.whatsapp_client import WhatsAppClient
 
 # Load environment variables
 load_dotenv()
@@ -24,6 +25,7 @@ if not GEMINI_API_KEY:
 
 genai_client = genai.Client(api_key=GEMINI_API_KEY)
 gmail_client = GmailClient()
+whatsapp_client = WhatsAppClient()
 
 GRAPH_API_BASE_URL = "https://graph.microsoft.com/v1.0"
 
@@ -325,24 +327,84 @@ def assign_task(request):
 @csrf_exempt
 def reply_to_email(request):
     if request.method == 'POST':
-        data = json.loads(request.body)
-        email_query = EmailQuery.objects.get(id=data['email_query_id'])
-        reply_content = data['content']
-        gmail_message_id = gmail_client.send_reply(
-            to_email=email_query.customer.email,
-            subject=f"Re: {email_query.subject}",
-            body=reply_content,
-            thread_id=email_query.gmail_thread_id
-        )
-        EmailReply.objects.create(
-            email_query=email_query,
-            content=reply_content,
-            sent_at=now(),
-            gmail_message_id=gmail_message_id
-        )
-        email_query.is_replied = True
-        email_query.save()
-        return JsonResponse({'status': 'success', 'gmail_message_id': gmail_message_id})
+        try:
+            data = json.loads(request.body)
+            email_query = get_object_or_404(EmailQuery, id=data['email_query_id'])
+            reply_content = data['content'].strip()
+            message_id = data.get('message_id')
+            
+            if not reply_content:
+                return JsonResponse({'error': 'Reply content cannot be empty'}, status=400)
+
+            # Add email signature and format content
+            formatted_content = f"{reply_content}\n\nBest regards,\nMaxRemind Team"
+            
+            # Retry mechanism for Gmail API
+            max_retries = 3
+            retry_count = 0
+            while retry_count < max_retries:
+                try:
+                    gmail_message_id = gmail_client.reply_to_thread(
+                        to_email=email_query.customer.email,
+                        subject=f"Re: {email_query.subject}",
+                        body=formatted_content,
+                        thread_id=email_query.gmail_thread_id,
+                        message_id=message_id
+                    )
+                    
+                    if gmail_message_id:
+                        break
+                    retry_count += 1
+                except Exception as e:
+                    logging.error(f"Retry {retry_count + 1} failed: {str(e)}")
+                    retry_count += 1
+                    if retry_count == max_retries:
+                        raise
+
+            if not gmail_message_id:
+                raise Exception("Failed to send email after multiple retries")
+
+            reply = EmailReply.objects.create(
+                email_query=email_query,
+                content=formatted_content,
+                sent_at=now(),
+                gmail_message_id=gmail_message_id
+            )
+            
+            email_query.is_replied = True
+            email_query.save()
+            
+            # Create success log
+            EmailLog.objects.create(
+                email_query=email_query,
+                action='Replied',
+                message=f"Reply sent successfully. Message ID: {gmail_message_id}"
+            )
+            
+            return JsonResponse({
+                'status': 'success',
+                'reply': {
+                    'id': reply.id,
+                    'content': reply.content,
+                    'sent_at': reply.sent_at.isoformat(),
+                    'gmail_message_id': gmail_message_id
+                }
+            })
+            
+        except Exception as e:
+            logging.error(f"Error sending reply: {str(e)}")
+            # Create error log
+            EmailLog.objects.create(
+                email_query=email_query if 'email_query' in locals() else None,
+                action='Failed',
+                message=f"Reply failed: {str(e)}"
+            )
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Failed to send reply. Please try again.',
+                'error': str(e)
+            }, status=500)
+    
     return JsonResponse({'error': 'Invalid request method'}, status=400)
 
 def dashboard_data(request):
@@ -386,12 +448,17 @@ def fetch_email_details(request, id):
     if request.method == 'GET':
         try:
             email = EmailQuery.objects.get(id=id)
+            # Fetch the complete thread from Gmail
+            thread_messages = gmail_client.get_thread(email.gmail_thread_id)
+            
             email_details = {
                 'id': email.id,
                 'subject': email.subject,
                 'sender': email.customer.email,
                 'body': email.content,
                 'received_at': email.received_at,
+                'thread_id': email.gmail_thread_id,
+                'thread_messages': thread_messages
             }
             return JsonResponse({'status': 'success', 'email': email_details})
         except EmailQuery.DoesNotExist:
@@ -463,8 +530,6 @@ def fetch_task_details(request, email_query_id):
             return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
     return JsonResponse({'error': 'Invalid request method'}, status=400)
 
-
-
 @csrf_exempt
 def fetch_tasks_with_email_history(request):
     if request.method == 'GET':
@@ -496,6 +561,205 @@ def fetch_tasks_with_email_history(request):
             return JsonResponse({'status': 'success', 'tasks': task_list})
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+    return JsonResponse({'error': 'Invalid request method'}, status=400)
+
+@csrf_exempt
+def fetch_whatsapp_messages(request):
+    if request.method == 'POST':
+        try:
+            logging.info("Starting to fetch WhatsApp messages")
+            messages = whatsapp_client.fetch_unread_messages()
+            messages_fetched = 0
+            valid_messages = []
+
+            for message in messages:
+                logging.debug(f"Processing WhatsApp message: {message}")
+                
+                # Check if customer exists by phone number
+                phone_number = message.get('from', '').strip()
+                if not phone_number:
+                    logging.error("Message has no 'from' number")
+                    continue
+
+                customer = Customer.objects.filter(phone_number=phone_number).first()
+                
+                # Create customer if doesn't exist
+                if not customer:
+                    logging.info(f"Creating new customer for number: {phone_number}")
+                    customer = Customer.objects.create(
+                        phone_number=phone_number,
+                        preferred_contact='whatsapp'
+                    )
+
+                # Check for existing message to avoid duplicates
+                existing_message = WhatsAppMessage.objects.filter(
+                    whatsapp_message_id=message['id']
+                ).exists()
+
+                if not existing_message:
+                    whatsapp_message = WhatsAppMessage.objects.create(
+                        customer=customer,
+                        thread_id=message.get('thread_id', ''),
+                        content=message.get('content', ''),
+                        received_at=now(),
+                        whatsapp_message_id=message['id']
+                    )
+                    
+                    # Generate AI reply
+                    try:
+                        response = client.models.generate_content(
+                            model="gemini-2.0-flash",
+                            contents=f"""
+                            Generate a friendly WhatsApp reply to: {message.get('content', '')}
+                            Keep it concise and conversational.
+                            """
+                        )
+                        reply_content = response.text
+
+                        reply = whatsapp_client.send_reply(
+                            to_number=phone_number,
+                            message=reply_content,
+                            thread_id=message.get('thread_id', '')
+                        )
+
+                        if reply:
+                            WhatsAppReply.objects.create(
+                                message=whatsapp_message,
+                                content=reply_content,
+                                whatsapp_message_id=reply['message_id']
+                            )
+                            messages_fetched += 1
+                            valid_messages.append({
+                                'id': whatsapp_message.id,
+                                'from': phone_number,
+                                'content': message.get('content', ''),
+                                'received_at': whatsapp_message.received_at.isoformat(),
+                                'thread_id': message.get('thread_id', ''),
+                                'reply': reply_content
+                            })
+                            logging.info(f"Successfully processed message {message['id']}")
+                    except Exception as e:
+                        logging.error(f"Error processing WhatsApp message: {str(e)}")
+                else:
+                    logging.debug(f"Message {message['id']} already exists")
+
+            return JsonResponse({
+                'status': 'success',
+                'messages_fetched': messages_fetched,
+                'messages': valid_messages,
+                'debug_info': {
+                    'total_messages_received': len(messages),
+                    'total_valid_messages': len(valid_messages)
+                }
+            })
+        except Exception as e:
+            logging.error(f"Error in fetch_whatsapp_messages: {str(e)}")
+            return JsonResponse({
+                'status': 'error',
+                'error': str(e),
+                'message': 'Failed to fetch WhatsApp messages'
+            }, status=500)
+
+    return JsonResponse({'error': 'Invalid request method'}, status=400)
+
+@csrf_exempt
+def fetch_whatsapp_details(request, id):
+    if request.method == 'GET':
+        try:
+            message = WhatsAppMessage.objects.get(id=id)
+            thread_messages = whatsapp_client.get_thread(message.thread_id)
+            
+            message_details = {
+                'id': message.id,
+                'thread_id': message.thread_id,
+                'customer_name': message.customer.name,
+                'phone_number': message.customer.phone_number,
+                'content': message.content,
+                'received_at': message.received_at,
+                'thread_messages': thread_messages
+            }
+            return JsonResponse({'status': 'success', 'message': message_details})
+        except WhatsAppMessage.DoesNotExist:
+            return JsonResponse({'error': 'Message not found'}, status=404)
+    return JsonResponse({'error': 'Invalid request method'}, status=400)
+
+@csrf_exempt
+def reply_to_whatsapp(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            message = WhatsAppMessage.objects.get(id=data['message_id'])
+            content = data['content'].strip()
+            
+            if not content:
+                return JsonResponse({'error': 'Message content cannot be empty'}, status=400)
+            
+            reply = whatsapp_client.send_reply(
+                to_number=message.customer.phone_number,
+                message=content,
+                thread_id=message.thread_id
+            )
+            
+            if reply:
+                whatsapp_reply = WhatsAppReply.objects.create(
+                    message=message,
+                    content=content,
+                    whatsapp_message_id=reply['message_id']
+                )
+                
+                return JsonResponse({
+                    'status': 'success',
+                    'reply': {
+                        'id': whatsapp_reply.id,
+                        'content': whatsapp_reply.content,
+                        'sent_at': whatsapp_reply.sent_at.isoformat(),
+                    }
+                })
+            else:
+                raise Exception("Failed to send WhatsApp reply")
+                
+        except Exception as e:
+            logging.error(f"Error sending WhatsApp reply: {str(e)}")
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Failed to send reply. Please try again.',
+                'error': str(e)
+            }, status=500)
+    
+    return JsonResponse({'error': 'Invalid request method'}, status=400)
+
+@csrf_exempt
+def fetch_whatsapp_thread(request, thread_id):
+    if request.method == 'GET':
+        try:
+            messages = WhatsAppMessage.objects.filter(thread_id=thread_id).order_by('received_at')
+            replies = WhatsAppReply.objects.filter(message__thread_id=thread_id).order_by('sent_at')
+            
+            thread_data = {
+                'thread_id': thread_id,
+                'messages': list(messages.values('id', 'content', 'received_at', 'customer__name')),
+                'replies': list(replies.values('id', 'content', 'sent_at'))
+            }
+            
+            return JsonResponse({'status': 'success', 'thread': thread_data})
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+    return JsonResponse({'error': 'Invalid request method'}, status=400)
+
+@csrf_exempt
+def fetch_unread_whatsapp(request):
+    if request.method == 'GET':
+        unread_messages = WhatsAppMessage.objects.filter(is_replied=False).values(
+            'id',
+            'content',
+            'customer__name',
+            'customer__phone_number',
+            'received_at'
+        )
+        return JsonResponse({
+            'status': 'success',
+            'messages': list(unread_messages)
+        })
     return JsonResponse({'error': 'Invalid request method'}, status=400)
 
 

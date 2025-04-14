@@ -172,6 +172,52 @@ class GmailClient:
             logging.error("Error sending reply: %s", e)
             return None
 
+    def get_thread(self, thread_id):
+        logging.debug("Fetching thread with ID: %s", thread_id)
+        try:
+            thread = self.service.users().threads().get(userId='me', id=thread_id).execute()
+            messages = []
+            
+            for message in thread['messages']:
+                msg_data = self.get_email(message['id'])
+                if msg_data:
+                    messages.append(msg_data)
+            
+            # Sort messages by date
+            messages.sort(key=lambda x: x.get('date', ''))
+            return messages
+        except Exception as e:
+            logging.error("Error fetching thread %s: %s", thread_id, e)
+            return []
+
+    def reply_to_thread(self, to_email, subject, body, thread_id, message_id=None):
+        logging.debug("Sending reply to thread: %s", thread_id)
+        try:
+            message = MIMEText(body)
+            message['to'] = to_email
+            message['subject'] = subject
+            
+            # Add In-Reply-To and References headers if replying to a specific message
+            if message_id:
+                message['In-Reply-To'] = message_id
+                message['References'] = message_id
+
+            raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode()
+
+            message_sent = self.service.users().messages().send(
+                userId='me',
+                body={
+                    'raw': raw_message,
+                    'threadId': thread_id
+                }
+            ).execute()
+
+            logging.info("Reply sent successfully: Gmail Message ID: %s", message_sent['id'])
+            return message_sent['id']
+        except Exception as e:
+            logging.error("Error sending reply: %s", e)
+            return None
+
 if __name__ == "__main__":
     logging.info("Starting GmailClient test...")
     gmail_client = GmailClient()

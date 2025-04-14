@@ -7,7 +7,8 @@ const Sidebar = ({ onToggle }) => {
   const [collapsed, setCollapsed] = useState(false); // State to manage collapse
   const menuItems = [
     { id: 1, name: 'Dashboard', icon: 'fa-chart-line', link: '/' },
-    { id: 2, name: 'Queries', icon: 'fa-comments', link: '/queries' },
+    { id: 2, name: 'Email Queries', icon: 'fa-comments', link: '/queries' },
+    // { id: 2, name: 'Email Queries', icon: 'fa-comments', link: '/queries' },
     { id: 3, name: 'Tasks', icon: 'fa-tasks', link: '/tasks' },
     { id: 4, name: 'Settings', icon: 'fa-cog', link: '/settings' },
   ];

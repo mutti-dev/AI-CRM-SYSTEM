@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
 from pathlib import Path
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -25,7 +26,10 @@ SECRET_KEY = 'django-insecure-^#opt8hk2+7k$idupqc=9q_!)&cjn!a5ilwxn72ab0)u)pjxy*
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
+# ALLOWED_HOSTS = ['192.168.137.1']
 ALLOWED_HOSTS = ['*']
+
+
 
 
 # Application definition
@@ -152,3 +156,16 @@ CORS_ALLOW_CREDENTIALS = True
 CELERY_BROKER_URL = 'redis://localhost:6379/0'  # Redis as the message broker
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
+
+# WhatsApp API Settings
+WAAPI_API_KEY = os.getenv('WAAPI_API_KEY')
+WAAPI_BASE_URL = os.getenv('WAAPI_BASE_URL', 'https://api.waapi.com/v1')
+WAAPI_SSL_VERIFY = os.getenv('WAAPI_SSL_VERIFY', 'True').lower() == 'true'
+WAAPI_TIMEOUT = int(os.getenv('WAAPI_TIMEOUT', '30'))
+
+# Ensure required settings are present
+if not WAAPI_API_KEY:
+    raise ValueError("WAAPI_API_KEY environment variable is not set")
+
+WAAPI_SSL_VERIFY = True  # Set to False only in development if needed
+WAAPI_TIMEOUT = 30  # seconds

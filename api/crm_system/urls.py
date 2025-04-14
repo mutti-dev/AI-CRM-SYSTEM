@@ -40,4 +40,11 @@ urlpatterns = [
     path('api/task-details/<int:email_query_id>/', views.fetch_task_details, name='fetch_task_details'),
     path('api/tasks-with-email-history/', views.fetch_tasks_with_email_history, name='fetch_tasks_with_email_history'),
     path('api/tickets/<int:ticket_id>/', views.fetch_email_details, name='get_ticket'),
+    
+    # WhatsApp routes
+    path('api/whatsapp/messages/', views.fetch_whatsapp_messages, name='fetch_whatsapp_messages'),
+    path('api/whatsapp/details/<int:id>/', views.fetch_whatsapp_details, name='fetch_whatsapp_details'),
+    path('api/whatsapp/reply/', views.reply_to_whatsapp, name='reply_to_whatsapp'),
+    path('api/whatsapp/thread/<str:thread_id>/', views.fetch_whatsapp_thread, name='fetch_whatsapp_thread'),
+    path('api/whatsapp/unread/', views.fetch_unread_whatsapp, name='fetch_unread_whatsapp'),
 ]

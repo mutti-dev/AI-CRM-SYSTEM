@@ -11,6 +11,7 @@ import UploadDataset from './components/UploadDataset';
 import { Routes, Route, useLocation } from 'react-router-dom';
 import TicketTabs from './components/TicketTabs';
 import { useParams } from 'react-router-dom';
+import WhatsAppScreen from './components/WhatsAppScreen';
 
 function App() {
   const { id } = useParams();
@@ -37,6 +38,7 @@ function App() {
             <Route path="/settings" element={<Settings />} />
             <Route path="/details/:id" element={<DetailsScreen />} />
             <Route path="/upload-dataset" element={<UploadDataset />} />
+            <Route path="/whatsapp/:id" element={<WhatsAppScreen />} />
           </Routes>
         </main>
       </div>
