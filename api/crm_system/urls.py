@@ -31,6 +31,7 @@ urlpatterns = [
     path('api/reply-email/', views.reply_to_email, name='reply_email'),
     path('api/dashboard-data/', views.dashboard_data, name='dashboard_data'),
     path('api/customers/', views.fetch_customers, name='fetch_customers'),
+    path('api/customers/create/', views.create_customer, name='create_customer'),
     path('api/unread-emails/', views.fetch_unread_emails_from_db, name='fetch_unread_emails_from_db'),
     path('api/email-details/<int:id>/', views.fetch_email_details, name='fetch_email_details'),
     path('api/email-replies/<int:id>/', views.fetch_email_replies, name='fetch_email_replies'),
@@ -47,4 +48,5 @@ urlpatterns = [
     path('api/whatsapp/reply/', views.reply_to_whatsapp, name='reply_to_whatsapp'),
     path('api/whatsapp/thread/<str:thread_id>/', views.fetch_whatsapp_thread, name='fetch_whatsapp_thread'),
     path('api/whatsapp/unread/', views.fetch_unread_whatsapp, name='fetch_unread_whatsapp'),
+    path('api/whatsapp/test-connection/', views.test_whatsapp_connection, name='test_whatsapp_connection'),
 ]

@@ -159,11 +159,12 @@ CELERY_TASK_SERIALIZER = 'json'
 
 # WhatsApp API Settings
 WAAPI_API_KEY = os.getenv('WAAPI_API_KEY')
-WAAPI_BASE_URL = os.getenv('WAAPI_BASE_URL', 'https://api.waapi.com/v1')
-WAAPI_SSL_VERIFY = os.getenv('WAAPI_SSL_VERIFY', 'True').lower() == 'true'
+WAAPI_BASE_URL = os.getenv('WAAPI_BASE_URL', 'https://whatsapp.maxremind.com/api/v1')
 WAAPI_TIMEOUT = int(os.getenv('WAAPI_TIMEOUT', '30'))
+WAAPI_SSL_VERIFY = os.getenv('WAAPI_SSL_VERIFY', 'True').lower() == 'true'
+WAAPI_TEST_MODE = os.getenv('WAAPI_TEST_MODE', 'True').lower() == 'true'  # Add this line
 
-# Ensure required settings are present
+# Validate required settings
 if not WAAPI_API_KEY:
     raise ValueError("WAAPI_API_KEY environment variable is not set")
 
