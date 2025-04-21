@@ -44,9 +44,8 @@ urlpatterns = [
     
     # WhatsApp routes
     path('api/whatsapp/messages/', views.fetch_whatsapp_messages, name='fetch_whatsapp_messages'),
-    path('api/whatsapp/details/<int:id>/', views.fetch_whatsapp_details, name='fetch_whatsapp_details'),
-    path('api/whatsapp/reply/', views.reply_to_whatsapp, name='reply_to_whatsapp'),
-    path('api/whatsapp/thread/<str:thread_id>/', views.fetch_whatsapp_thread, name='fetch_whatsapp_thread'),
-    path('api/whatsapp/unread/', views.fetch_unread_whatsapp, name='fetch_unread_whatsapp'),
-    path('api/whatsapp/test-connection/', views.test_whatsapp_connection, name='test_whatsapp_connection'),
+    path('api/whatsapp/send_messages/', views.send_messages, name='send_messages'),
+    path('api/whatsapp/get_chat_by_id/', views.get_chat_by_id, name='get_chat_by_id'),
+    path('api/wa-webhook/', views.receive_wa_message, name='wa_webhook'),
+   
 ]

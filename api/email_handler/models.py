@@ -183,3 +183,8 @@ class WhatsAppReply(models.Model):
 
     def __str__(self):
         return f"Reply to WhatsApp: {self.message.customer.name}"
+    
+
+
+
+

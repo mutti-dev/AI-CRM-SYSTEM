@@ -6,7 +6,7 @@ url = "https://waapi.app/api/v1/instances/59949/client/action/get-chats"
 headers = {
     "accept": "application/json",
     "content-type": "application/json",
-    "authorization": "Bearer 4Uy6ByLNn17sqBBhCT4GB9Yi0AbTlu5r4Pzicxy62f6e1efb"
+    "authorization": "Bearer 82jDETagXhPijZVFMt0VfNUk86ouu8UavKSWgOko516201c7"
 }
 
 payload = {
@@ -17,7 +17,7 @@ payload = {
 
 try:
     response = requests.post(url, headers=headers, json=payload)
-    # print(f"Status Code: {response.status_code}")
-    # print("Response:", json.dumps(response.json(), indent=2))
+    print(f"Status Code: {response.status_code}")
+    print("Response:", json.dumps(response.json(), indent=2))
 except Exception as e:
     print(f"Error: {str(e)}")

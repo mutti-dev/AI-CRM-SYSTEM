@@ -102,6 +102,8 @@ def assign_task(request):
 
 @csrf_exempt
 def fetch_task_details(request, email_query_id):
+
+    print("email query id", email_query_id)
     if request.method == 'GET':
         try:
             task = Task.objects.filter(email_query_id=email_query_id).first()
