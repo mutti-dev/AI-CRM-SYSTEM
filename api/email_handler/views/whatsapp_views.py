@@ -8,16 +8,10 @@ import json
 from datetime import datetime
 import pytz
 from django.utils.timezone import make_aware
+from ..genai import client
 
 whatsapp_client = WhatsAppClient()
 logger = logging.getLogger(__name__)
-
-
-
-
-
-
-
 
 
 
@@ -27,19 +21,28 @@ logger = logging.getLogger(__name__)
 @require_POST
 def fetch_whatsapp_messages(request):
     try:
+        logger.info("Fetching WhatsApp messages...")
+
         # Fetch all messages
         messages = whatsapp_client.fetch_all_messages()
         raw_data = messages.get("data", {}).get("data", [])
+
+        logger.info(f"Fetched {len(raw_data)} message threads.")
 
         saved_messages = []
 
         for item in raw_data:
             whatsapp_id = item.get("id", {}).get("_serialized", "")
             user_id = item.get("id", {}).get("user", "")
-            last_message = item.get("lastMessage", {}).get("_data", {}).get("body", "")
+            last_message_data = item.get("lastMessage", {}).get("_data", {})
+            last_message = item.get("lastMessage", {}).get("_data", {}).get("body", {})
             timestamp = item.get("timestamp", None)
+            from_me = last_message_data.get("id", {}).get("fromMe", True)
+
+            logger.info(f"Processing message: ID={whatsapp_id}, fromMe={from_me}, body='{last_message}'")
 
             if not user_id or not timestamp or not last_message:
+                logger.warning(f"Skipping incomplete message. user_id={user_id}, timestamp={timestamp}, body='{last_message}'")
                 continue
 
             received_at = make_aware(datetime.fromtimestamp(int(timestamp)))
@@ -47,14 +50,13 @@ def fetch_whatsapp_messages(request):
             # Match using phone number only (user_id)
             customer = Customer.objects.filter(phone_number=user_id).first()
             if not customer:
-                logger.info(f"No customer found for phone: {user_id}")
+                # logger.info(f"No customer found for phone: {user_id}")
                 continue
 
             # Save or update message
             msg, created = WhatsAppMessage.objects.update_or_create(
                 whatsapp_message_id=whatsapp_id,
                 defaults={
-                    
                     'customer': customer,
                     'thread_id': whatsapp_id.split("@")[0],
                     'content': last_message,
@@ -62,13 +64,44 @@ def fetch_whatsapp_messages(request):
                 }
             )
 
+            logger.info(f"{'Created' if created else 'Updated'} message for customer: {customer.name} | Created: {created}")
+
             if created:
                 saved_messages.append({
+                    'customer_name': customer.name,
                     'chat_id': whatsapp_id,
                     'phone': user_id,
                     'message': last_message,
-                    'timestamp': received_at
+                    'timestamp': received_at.isoformat()
                 })
+
+                # ✅ Only send automated reply if message is **received** (not from me)
+                if not from_me:
+                    try:
+                        prompt = (
+                            f"You're a helpful, friendly assistant. Write a warm, professional, and clear automated reply "
+                            f"to a customer message. Address the customer by their name: {customer.name}. "
+                            f"Here is the customer's message: '{last_message}'\n\n"
+                            f"End the message with:\nAI Mutti\nMaxRemind"
+                        )
+                        # logger.info(f"Generating AI reply for {customer.name} | Prompt: {prompt}")
+
+                        gen_response = client.models.generate_content(
+                            model="gemini-2.0-flash", contents=prompt
+                        )
+
+                        message = gen_response.text.strip()
+                        # logger.info(f"AI reply generated: {message}")
+
+                        whatsapp_client.send_custom_message(whatsapp_id, message)
+                        logger.info(f"AI reply sent to {whatsapp_id}")
+
+                    except Exception as gen_err:
+                        logger.error(f"Error generating or sending AI reply for {user_id}: {gen_err}")
+                else:
+                    logger.debug(f"Skipping auto-reply for sent message from {customer.name}")
+
+        logger.info(f"Done processing messages. Saved: {len(saved_messages)}")
 
         return JsonResponse({
             'status': 'success',
@@ -77,26 +110,8 @@ def fetch_whatsapp_messages(request):
         })
 
     except Exception as e:
-        logger.error(f"Error fetching messages: {e}")
+        logger.error(f"Error fetching messages: {e}", exc_info=True)
         return JsonResponse({'status': 'error', 'error': str(e)}, status=500)
-
-
-
-
-
-
-
-
-@csrf_exempt
-@require_POST
-def send_messages(request):
-    try:
-        response = whatsapp_client.send_message()
-        return JsonResponse({'status': 'success', 'response': response})
-    except Exception as e:
-        logger.error(f"Error sending message: {e}")
-        return JsonResponse({'status': 'error', 'error': str(e)}, status=500)
-    
 
 
 
@@ -147,8 +162,6 @@ def get_whatsapp_messages_control(request):
     payload = {
         "chatId": req_payload.get("chatId", whatsapp_client.chat_id),
         "limit": req_payload.get("limit", 10),
-
-        "fromMe": req_payload.get("fromMe", False),
         "includeMedia": req_payload.get("includeMedia", False)
     }
     # Temporarily override the client's payload
@@ -164,52 +177,6 @@ def get_whatsapp_messages_control(request):
 
 
 
-
-
-@csrf_exempt
-def receive_wa_message(request):
-    if request.method == 'POST':
-        try:
-            data = json.loads(request.body)
-
-            value = data['entry'][0]['changes'][0]['value']
-            message_data = value['messages'][0]
-            contact_data = value['contacts'][0]
-
-            wa_id = contact_data['wa_id']  # Customer's WhatsApp number
-            whatsapp_message_id = message_data['id']
-            message_body = message_data['text']['body']
-            timestamp = int(message_data['timestamp'])
-
-            # Convert timestamp to datetime
-            
-            received_at = make_aware(datetime.fromtimestamp(timestamp))
-
-            # Look up customer by wa_id
-            try:
-                customer = Customer.objects.get(phone_number=wa_id)
-            except Customer.DoesNotExist:
-                return JsonResponse({'status': 'error', 'message': f'Customer with phone {wa_id} not found'}, status=404)
-
-            # Avoid duplicate messages
-            if WhatsAppMessage.objects.filter(whatsapp_message_id=whatsapp_message_id).exists():
-                return JsonResponse({'status': 'duplicate', 'message': 'Message already exists'})
-
-            # Save message
-            WhatsAppMessage.objects.create(
-                customer=customer,
-                thread_id=value.get('metadata', {}).get('display_phone_number', 'unknown'),
-                content=message_body,
-                received_at=received_at,
-                whatsapp_message_id=whatsapp_message_id
-            )
-
-            return JsonResponse({'status': 'success'})
-
-        except Exception as e:
-            return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
-
-    return JsonResponse({'status': 'error', 'message': 'Only POST allowed'}, status=405)
 
 
 
@@ -230,6 +197,9 @@ def get_all_whatsapp_messages(request):
             'received_at': msg.received_at.isoformat() if msg.received_at else ""
         })
     return JsonResponse({'status': 'success', 'messages': data})
+
+
+
 
 
 @csrf_exempt

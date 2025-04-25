@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { useParams } from 'react-router-dom';
+import React, { useEffect, useState, useRef } from "react";
+import { useParams } from "react-router-dom";
 import {
   Box,
   Typography,
@@ -10,19 +10,20 @@ import {
   Divider,
   Tooltip,
   useMediaQuery,
-  Skeleton
-} from '@mui/material';
+  Skeleton,
+} from "@mui/material";
 
-import { styled, keyframes } from '@mui/system';
-import config from '../config/config';
-import Sidebar2 from './Sidebar2';
-import { formatTime } from '../utils/formatTime';
-import Send from '../assets/svgs/Send';
-import ArrowBack from '../assets/svgs/ArrowBack';
-import Error from '../assets/svgs/Error';
-import Person from '../assets/svgs/Person';
-import Schedule from '../assets/svgs/Schedule';
-import ActionPanel from './ActionPanel';
+import { styled, keyframes } from "@mui/system";
+import config from "../config/config";
+import Sidebar2 from "./Sidebar2";
+import { formatTime } from "../utils/formatTime";
+import Send from "../assets/svgs/Send";
+import ArrowBack from "../assets/svgs/ArrowBack";
+import Error from "../assets/svgs/Error";
+import Person from "../assets/svgs/Person";
+import Schedule from "../assets/svgs/Schedule";
+import ActionPanel from "./ActionPanel";
+import { formatReplyContent } from "../utils/formatReplyContent";
 
 const slideIn = keyframes`
   from {
@@ -36,18 +37,18 @@ const slideIn = keyframes`
 `;
 
 const MessageBubble = styled(Box)(({ sent }) => ({
-  maxWidth: '75%',
-  padding: '16px',
-  borderRadius: sent ? '18px 18px 0 18px' : '18px 18px 18px 0',
-  backgroundColor: sent ? '#0084ff' : '#2d2d2d',
-  color: 'white',
-  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+  maxWidth: "75%",
+  padding: "16px",
+  borderRadius: sent ? "18px 18px 0 18px" : "18px 18px 18px 0",
+  backgroundColor: sent ? "#0084ff" : "#2d2d2d",
+  color: "white",
+  boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)",
   animation: `${slideIn} 0.3s ease`,
-  position: 'relative',
-  wordBreak: 'break-word',
-  marginBottom: '16px',
-  '&:hover': {
-    boxShadow: '0 2px 6px rgba(0, 0, 0, 0.15)',
+  position: "relative",
+  wordBreak: "break-word",
+  marginBottom: "16px",
+  "&:hover": {
+    boxShadow: "0 2px 6px rgba(0, 0, 0, 0.15)",
   },
 }));
 
@@ -55,14 +56,15 @@ const DetailsScreen = () => {
   const { id } = useParams();
   const [email, setEmail] = useState(null);
   const [replies, setReplies] = useState([]);
-  const [replyContent, setReplyContent] = useState('');
+  console.log("Replies:", replies);
+  const [replyContent, setReplyContent] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const messagesEndRef = useRef(null);
-  const isMobile = useMediaQuery('(max-width:600px)');
+  const isMobile = useMediaQuery("(max-width:600px)");
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
   useEffect(() => {
@@ -74,10 +76,11 @@ const DetailsScreen = () => {
       try {
         const [emailRes, repliesRes] = await Promise.all([
           fetch(`${config.API_URL}/api/email-details/${id}/`),
-          fetch(`${config.API_URL}/api/email-replies/${id}/`)
+          fetch(`${config.API_URL}/api/email-replies/${id}/`),
         ]);
 
-        if (!emailRes.ok || !repliesRes.ok) throw new Error('Failed to fetch data');
+        if (!emailRes.ok || !repliesRes.ok)
+          throw new Error("Failed to fetch data");
 
         const emailData = await emailRes.json();
         const repliesData = await repliesRes.json();
@@ -99,19 +102,19 @@ const DetailsScreen = () => {
 
     try {
       const response = await fetch(`${config.API_URL}/api/reply-email/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email_query_id: id,
-          content: replyContent
-        })
+          content: replyContent,
+        }),
       });
 
-      if (!response.ok) throw new Error('Failed to send reply');
-      
+      if (!response.ok) throw new Error("Failed to send reply");
+
       const result = await response.json();
-      setReplies(prev => [...prev, result.reply]);
-      setReplyContent('');
+      setReplies((prev) => [...prev, result.reply]);
+      setReplyContent("");
     } catch (err) {
       setError(err.message);
     }
@@ -138,7 +141,12 @@ const DetailsScreen = () => {
 
   if (error) {
     return (
-      <Box display="flex" height="100vh" alignItems="center" justifyContent="center">
+      <Box
+        display="flex"
+        height="100vh"
+        alignItems="center"
+        justifyContent="center"
+      >
         <Box textAlign="center">
           <Error width="28" height="28" fill="white" />
           <Typography variant="h5" gutterBottom color="white">
@@ -152,8 +160,15 @@ const DetailsScreen = () => {
 
   if (!email) {
     return (
-      <Box display="flex" height="100vh" alignItems="center" justifyContent="center">
-        <Typography variant="h5" color="white">Email Not Found</Typography>
+      <Box
+        display="flex"
+        height="100vh"
+        alignItems="center"
+        justifyContent="center"
+      >
+        <Typography variant="h5" color="white">
+          Email Not Found
+        </Typography>
       </Box>
     );
   }
@@ -161,19 +176,19 @@ const DetailsScreen = () => {
   return (
     <Box display="flex" height="100vh" width="100vw" overflow="hidden">
       <Sidebar2 emailQueryId={id} />
-      
-      <Box 
-        flex={1} 
-        display="flex" 
-        flexDirection="column" 
+
+      <Box
+        flex={1}
+        display="flex"
+        flexDirection="column"
         height="100vh"
         overflow="hidden"
       >
         {/* Header Section - Fixed height */}
-        <Box 
-          p={isMobile ? 1 : 2} 
-          bgcolor="#2d2d2d" 
-          boxShadow={1} 
+        <Box
+          p={isMobile ? 1 : 2}
+          bgcolor="#2d2d2d"
+          boxShadow={1}
           flexShrink={0}
         >
           <Box display="flex" alignItems="center" gap={2} mb={1}>
@@ -191,10 +206,10 @@ const DetailsScreen = () => {
         </Box>
 
         {/* Messages Container - Flexible space with scroll */}
-        <Box 
-          flex={1} 
-          overflow="auto" 
-          p={isMobile ? 1 : 2} 
+        <Box
+          flex={1}
+          overflow="auto"
+          p={isMobile ? 1 : 2}
           bgcolor="#1a1a1a"
           display="flex"
           flexDirection="column"
@@ -202,13 +217,13 @@ const DetailsScreen = () => {
           {/* Original Email */}
           <Box display="flex" justifyContent="flex-start">
             <MessageBubble sent={false}>
-              <Typography variant="h6" color="white" gutterBottom>
-                {email.subject}
-              </Typography>
-              <Divider sx={{ backgroundColor: '#444', my: 1 }} />
-              <Typography variant="body1" paragraph color="white">
-                {email.body}
-              </Typography>
+              <Typography
+                variant="body1"
+                component="div"
+                dangerouslySetInnerHTML={{
+                  __html: formatReplyContent(email.body),
+                }}
+              />
               <Box display="flex" alignItems="center" gap={1} mt={1}>
                 <Schedule width="16" height="16" fill="#aaa" />
                 <Typography variant="caption" color="#aaa">
@@ -222,10 +237,23 @@ const DetailsScreen = () => {
           {replies.map((reply, index) => (
             <Box key={index} display="flex" justifyContent="flex-end">
               <MessageBubble sent={true}>
-                <Typography variant="body1" paragraph color="white">
-                  {reply.content}
-                </Typography>
-                <Box display="flex" alignItems="center" gap={1} justifyContent="flex-end">
+                {/* <Typography variant="body1" paragraph color="white">
+                  {formatReplyContent(reply.content)}
+                </Typography> */}
+
+                <Typography
+                  variant="body1"
+                  component="div"
+                  dangerouslySetInnerHTML={{
+                    __html: formatReplyContent(reply.content),
+                  }}
+                />
+                <Box
+                  display="flex"
+                  alignItems="center"
+                  gap={1}
+                  justifyContent="flex-end"
+                >
                   <Schedule width="16" height="16" fill="#aaa" />
                   <Typography variant="caption" color="#aaa">
                     {formatTime(reply.sent_at)}
@@ -238,11 +266,7 @@ const DetailsScreen = () => {
         </Box>
 
         {/* Reply Input - Fixed height */}
-        <Box 
-          p={isMobile ? 1 : 2} 
-          bgcolor="#2d2d2d" 
-          flexShrink={0}
-        >
+        <Box p={isMobile ? 1 : 2} bgcolor="#2d2d2d" flexShrink={0}>
           <Box display="flex" gap={1} alignItems="center">
             <Avatar sx={{ width: 40, height: 40 }}>
               {email.sender[0].toUpperCase()}
@@ -256,23 +280,25 @@ const DetailsScreen = () => {
               placeholder="Type your reply..."
               value={replyContent}
               onChange={(e) => setReplyContent(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleReply()}
+              onKeyPress={(e) =>
+                e.key === "Enter" && !e.shiftKey && handleReply()
+              }
               sx={{
-                '& .MuiOutlinedInput-root': {
-                  backgroundColor: '#1a1a1a',
-                  color: 'white',
-                  '& fieldset': {
-                    borderColor: '#444',
+                "& .MuiOutlinedInput-root": {
+                  backgroundColor: "#1a1a1a",
+                  color: "white",
+                  "& fieldset": {
+                    borderColor: "#444",
                   },
-                  '&:hover fieldset': {
-                    borderColor: '#666',
+                  "&:hover fieldset": {
+                    borderColor: "#666",
                   },
                 },
               }}
             />
             <Tooltip title="Send reply">
-              <IconButton 
-                color="primary" 
+              <IconButton
+                color="primary"
                 onClick={handleReply}
                 disabled={!replyContent.trim()}
               >

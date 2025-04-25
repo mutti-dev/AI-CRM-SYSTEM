@@ -83,14 +83,21 @@ WSGI_APPLICATION = 'crm_system.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.mysql',
+#         'NAME': 'crm_system_db',  # Replace with your database name
+#         'USER': 'root',  # Replace with your MySQL username
+#         'PASSWORD': '',  # Replace with your MySQL password
+#         'HOST': 'localhost',  # Replace with your MySQL host (e.g., '127.0.0.1')
+#         'PORT': '3306',  # Replace with your MySQL port if different
+#     }
+# }
+
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'crm_system_db',  # Replace with your database name
-        'USER': 'root',  # Replace with your MySQL username
-        'PASSWORD': '',  # Replace with your MySQL password
-        'HOST': 'localhost',  # Replace with your MySQL host (e.g., '127.0.0.1')
-        'PORT': '3306',  # Replace with your MySQL port if different
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
 
@@ -172,3 +179,4 @@ if not WAAPI_API_KEY:
 
 WAAPI_SSL_VERIFY = True  # Set to False only in development if needed
 WAAPI_TIMEOUT = 30  # seconds
+

@@ -112,6 +112,9 @@ class WhatsAppClient:
         except Exception as e:
             print(f"Error getting chat: {e}")
             return None
+        
+
+
 
     def fetch_messages(self):
         """
@@ -122,10 +125,10 @@ class WhatsAppClient:
             fetch_messages_url = f"{self.base_url}/client/action/fetch-messages"
             payload = {
                 "chatId": self.chat_id,
-                "limit": 10,
-                "fromMe": False,
+                "limit": 15,
                 "includeMedia": False
             }
+            # print(f"Payload Mutti: {payload}")
             response = requests.post(fetch_messages_url, headers=self.headers, json=payload, timeout=self.timeout)
             if response.status_code == 200:
                 return response.json()
@@ -135,6 +138,10 @@ class WhatsAppClient:
         except Exception as e:
             print(f"Error fetching messages: {e}")
             return None
+        
+
+
+
 
     def send_custom_message(self, chatId, message):
         """
@@ -146,6 +153,8 @@ class WhatsAppClient:
                 "chatId": chatId,
                 "message": message
             }
+
+            print(f"Payload Mutti: {payload}")
             response = requests.post(send_message_url, headers=self.headers, json=payload, timeout=self.timeout)
             print(f"Status Code: {response.status_code}")
             print("Response:", response.text)
