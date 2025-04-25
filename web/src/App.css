@@ -7,12 +7,25 @@
 
 .App-main {
   transition: margin-left 0.5s ease, width 0.5s ease;
+  flex-grow: 1;
+  padding-right: 300px;
+  overflow-y: auto;
 }
 
 .App-container {
   display: flex;
   min-height: 100vh;
+  overflow: hidden;
+  position: relative;
 }
+/* .action-panel {
+  width: 280px;
+  background-color: #2a2a2a;
+  padding: 16px;
+  border-left: 1px solid #333;
+  display: flex;
+  flex-direction: column;
+} */
 
 .App-main.expanded {
   margin-left: 80px; /* Adjust for collapsed sidebar width */
@@ -21,11 +34,11 @@
 
 .App-main {
   flex: 1;
-  padding: 30px;
-  margin-left: 280px; /* Match sidebar width */
+  padding: 60px;
+  margin-left: 280px;
   background-color: #1a1a1a;
   overflow-y: auto;
-  height: calc(100vh - 60px); /* Account for padding */
+  height: calc(100vh - 60px); 
 }
 
 /* Responsive handling */

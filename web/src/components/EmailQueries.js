@@ -18,6 +18,7 @@ import config from "../config/config";
 import FetchEmailsButton from "./FetchEmailsButton";
 import TicketTabs from "./TicketTabs";
 import { formatTime } from "../utils/formatTime";
+import Sidebar from "./Sidebar";
 
 const Queries = () => {
   const navigate = useNavigate();
@@ -130,6 +131,7 @@ const Queries = () => {
         <TicketTabs />
         <FetchEmailsButton onEmailsFetched={handleEmailsFetched} />
       </div>
+
       <div className="filters-container">
         <TextField
           label="Search"

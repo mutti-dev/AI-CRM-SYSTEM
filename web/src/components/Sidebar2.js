@@ -124,9 +124,9 @@ const Sidebar2 = ({ emailQueryId, onToggle }) => {
       <a href="/queries" className="sidebar2-back-link">
         ← Back
       </a>
-      <button className="collapse-button" onClick={handleToggle}>
+      {/* <button className="collapse-button" onClick={handleToggle}>
         {collapsed ? '>' : '<'}
-      </button>
+      </button> */}
       <h2 className="sidebar2-title">Assign Task</h2>
       <form onSubmit={handleSubmit} className="assign-task-form">
         <div className="form-group">

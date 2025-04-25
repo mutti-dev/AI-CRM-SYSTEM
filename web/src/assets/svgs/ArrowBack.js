@@ -1,0 +1,18 @@
+import * as React from "react";
+const ArrowBack = (props) => (
+  <svg
+    width="800px"
+    height="800px"
+    viewBox="0 0 48 48"
+    xmlns="http://www.w3.org/2000/svg"
+    {...props}
+  >
+    <path d="M0 0h48v48H0z" fill="none" />
+    <g id="Shopicon">
+      <g>
+        <polygon points="30.586,6.585 13.171,23.999 30.586,41.413 33.414,38.585 18.829,23.999 33.414,9.413  " />
+      </g>
+    </g>
+  </svg>
+);
+export default ArrowBack;

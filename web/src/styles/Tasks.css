@@ -1,6 +1,6 @@
 .tasks {
   padding: 20px;
-  background-color: #f9f9f9;
+  background-color: #1a1a1a;
   border-radius: 8px;
   box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
 }
@@ -12,7 +12,7 @@
 }
 
 .task-card {
-  background-color: #ffffff;
+  background-color: #282c34;
   border: 1px solid #ddd;
   border-radius: 8px;
   padding: 15px;
@@ -27,7 +27,7 @@
 
 .task-card p {
   margin: 5px 0;
-  color: #555;
+  color: #f4f4f4;
 }
 
 .task-card h4 {
@@ -43,6 +43,6 @@
 .task-card ul li {
   margin-bottom: 10px;
   padding: 10px;
-  background-color: #f4f4f4;
+  background-color: #1a1a1a;
   border-radius: 5px;
 }

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import '../styles/Tasks.css';
 import config from '../config/config';
+import Sidebar from './Sidebar';
 
 const Tasks = () => {
   const [tasks, setTasks] = useState([]);
@@ -31,6 +32,7 @@ const Tasks = () => {
 
   return (
     <div className="tasks">
+
       <h2>Tasks</h2>
       {tasks.length === 0 ? (
         <p>No tasks available.</p>
