@@ -9,6 +9,7 @@ from datetime import datetime
 import pytz
 from django.utils.timezone import make_aware
 from ..genai import client
+from ..prompts import generate_whatsapp_reply_prompt
 
 whatsapp_client = WhatsAppClient()
 logger = logging.getLogger(__name__)
@@ -78,21 +79,11 @@ def fetch_whatsapp_messages(request):
                 # ✅ Only send automated reply if message is **received** (not from me)
                 if not from_me:
                     try:
-                        prompt = (
-                            f"You're a helpful, friendly assistant. Write a warm, professional, and clear automated reply "
-                            f"to a customer message. Address the customer by their name: {customer.name}. "
-                            f"Here is the customer's message: '{last_message}'\n\n"
-                            f"End the message with:\nAI Mutti\nMaxRemind"
-                        )
-                        # logger.info(f"Generating AI reply for {customer.name} | Prompt: {prompt}")
-
+                        prompt = generate_whatsapp_reply_prompt(customer.name, last_message)
                         gen_response = client.models.generate_content(
                             model="gemini-2.0-flash", contents=prompt
                         )
-
                         message = gen_response.text.strip()
-                        # logger.info(f"AI reply generated: {message}")
-
                         whatsapp_client.send_custom_message(whatsapp_id, message)
                         logger.info(f"AI reply sent to {whatsapp_id}")
 

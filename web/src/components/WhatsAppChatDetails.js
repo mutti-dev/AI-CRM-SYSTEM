@@ -18,12 +18,14 @@ import {
 } from "@mui/material";
 import { styled, keyframes } from "@mui/system";
 import config from "../config/config";
+
 import { formatTime } from "../utils/formatTime";
 import KeyboardArrowUp from "../assets/svgs/KeyboardArrowUp";
 import Person from "../assets/svgs/Person";
 import Refresh from "../assets/svgs/Refresh";
 import Send from "../assets/svgs/Send"; // Assuming you have this
 import { formatReplyContent } from "../utils/formatReplyContent";
+import Sidebar2 from "./Sidebar2";
 
 const fadeIn = keyframes`
   from {

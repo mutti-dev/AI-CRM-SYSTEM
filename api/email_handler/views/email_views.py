@@ -3,8 +3,9 @@ from django.views.decorators.csrf import csrf_exempt
 from django.shortcuts import get_object_or_404
 from django.utils.timezone import now
 from ..models import EmailQuery, EmailReply, EmailLog, FAQ, Customer
-from ..gmail_integration.gmail_client import GmailClient
+from ..email_integration.gmail_client import GmailClient
 from ..genai import client
+from ..prompts import generate_email_reply_prompt
 import json
 import logging
 import re
@@ -61,24 +62,10 @@ def fetch_unread_emails(request):
                     # Fetch previous email content in the thread for context
                     previous_emails = EmailQuery.objects.filter(gmail_thread_id=email['threadId']).values_list('content', flat=True)
                     thread_context = "\n\n".join(previous_emails)
-
-                    # Generate a professional and friendly reply using GenAI
+                    prompt = generate_email_reply_prompt(thread_context, email.get('body', ''))
                     response = client.models.generate_content(
                         model="gemini-2.0-flash",
-                        contents=f"""
-                        You are AI Mutti, a friendly and professional assistant from MaxRemind. 
-                        Your job is to generate well-written, polite, and helpful email replies.
-                        Respond to the following email in a clear, concise, and respectful tone. 
-                        Keep the language simple, professional, and approachable—neither too formal nor too casual. 
-                        Always make the sender feel acknowledged, understood, and supported.
-                        Make sure the reply sounds human, empathetic, and solution-oriented. 
-                        Avoid robotic phrasing or overly complex language.
-                        Here is the email thread context:
-                        \"\"\"{thread_context}\"\"\" 
-                        Here is the latest email content:
-                        \"\"\"{email.get('body', '')}\"\"\" 
-                        Write a well-formatted and thoughtful reply:
-                        """
+                        contents=prompt
                     )
                     reply_content = response.text
 

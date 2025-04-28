@@ -13,6 +13,12 @@ def recursive_json_parse(s):
             else:
                 break
         return data
+    except json.JSONDecodeError as e:
+        # Get a snippet of the JSON where the error occurred (20 characters before and after error position)
+        snippet = s[max(0, e.pos-20): e.pos+20]
+        print(f"Warning: unable to recursively parse JSON: {e.msg} at line {e.lineno} column {e.colno} (char {e.pos}).")
+        print(f"Field snippet around error: '{snippet}'")
+        return s
     except Exception as e:
         print(f"Warning: unable to recursively parse JSON: {e}")
         return s

@@ -1,6 +1,6 @@
 from celery import shared_task
 from celery import Celery
-from .gmail_integration.gmail_client import GmailClient
+from .email_integration.gmail_client import GmailClient
 from email_handler.models import EmailQuery, Customerfrom django.utils.timezone import now
 ng
 @shared_task
