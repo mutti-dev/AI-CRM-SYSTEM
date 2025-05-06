@@ -866,3 +866,33 @@ MaxRemind CRM provides a powerful, automated solution for customer relationship 
 The combination of an intuitive user interface, powerful backend processing, and intelligent AI features makes MaxRemind CRM an ideal solution for businesses looking to improve their customer service operations and response times.
 
 With its scalable architecture and comprehensive feature set, MaxRemind CRM can grow with your business needs while continuing to provide efficient customer relationship management capabilities.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Starting redis server
+# ✅ 2. celery -A crm_system worker --pool=solo --loglevel=info
+# Purpose: Starts the Celery worker, which executes the tasks (e.g., sending emails).
+
+# Required: ✅ Yes.
+
+# ✅ 3. celery -A crm_system beat --loglevel=info
+# Purpose: Starts the Celery Beat scheduler, which schedules periodic tasks (like CRON jobs).
+
+# Required: ✅ Yes — if you're using scheduled tasks.

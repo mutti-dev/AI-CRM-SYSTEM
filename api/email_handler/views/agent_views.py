@@ -6,6 +6,9 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
+
+
 @csrf_exempt
 def fetch_agents(request):
     if request.method == 'GET':
@@ -16,6 +19,9 @@ def fetch_agents(request):
         ]
         return JsonResponse({'status': 'success', 'agents': agent_list})
     return JsonResponse({'error': 'Invalid request method'}, status=400)
+
+
+
 
 @csrf_exempt
 def fetch_teams(request):

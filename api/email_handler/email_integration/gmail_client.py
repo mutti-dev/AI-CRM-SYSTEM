@@ -8,6 +8,7 @@ from googleapiclient.discovery import build
 from google.auth.transport.requests import Request  # Add this import
 from bs4 import BeautifulSoup
 import logging
+import json  # Add this import for JSON handling
 from email_handler.models import Customer
 
 
@@ -51,6 +52,11 @@ class GmailClient:
         service = build('gmail', 'v1', credentials=creds)
         logging.debug("Gmail API authenticated successfully.")
         return service
+    
+
+
+
+
 
     def fetch_unread_emails(self):
         logging.debug("Fetching unread emails...")
@@ -103,6 +109,8 @@ class GmailClient:
             payload = msg['payload']
             headers = payload['headers']
 
+            # Save payload to a file for debugging
+           
             subject = sender = date = ''
             for header in headers:
                 if header['name'] == 'Subject':
@@ -111,6 +119,8 @@ class GmailClient:
                     sender = header['value']
                 elif header['name'] == 'Date':
                     date = header['value']
+                elif header['name'].lower() == 'message-id':
+                    message_id = header['value']
 
             parts = payload.get('parts', [])
             body = ""
@@ -131,7 +141,8 @@ class GmailClient:
                 'subject': subject,
                 'sender': sender,
                 'date': date,
-                'body': clean_body.strip()
+                'body': clean_body.strip(),
+                'message_id': message_id
                 
             }
         except Exception as e:
@@ -148,12 +159,17 @@ class GmailClient:
                 body += self._parse_parts(part.get('parts'))
         return body
 
-    def send_reply(self, to_email, subject, body, thread_id):
+    def send_reply(self, to_email, subject, body, thread_id, message_id=None):
         logging.debug("Sending reply to: %s, Subject: %s", to_email, subject)
         try:
             message = MIMEText(body)
             message['to'] = to_email
             message['subject'] = subject
+
+            # Add In-Reply-To and References headers if replying to a specific message
+            if message_id:
+                message['In-Reply-To'] = message_id
+                message['References'] = message_id
 
             raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode()
 
@@ -196,6 +212,7 @@ class GmailClient:
             message = MIMEText(body)
             message['to'] = to_email
             message['subject'] = subject
+            
             
             # Add In-Reply-To and References headers if replying to a specific message
             if message_id:

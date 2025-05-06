@@ -15,7 +15,7 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path
+from django.urls import path, include
 from email_handler import views
 
 # Customize admin site headers
@@ -49,5 +49,5 @@ urlpatterns = [
     path('api/whatsapp/control_fetch/', views.get_whatsapp_messages_control, name='get_whatsapp_messages_control'),
     path('api/whatsapp/send_custom_message/', views.send_custom_message_view, name='send_custom_message_view'),
 
-   
+
 ]

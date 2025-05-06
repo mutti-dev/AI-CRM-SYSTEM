@@ -2,13 +2,13 @@ import React, { useState, useEffect } from 'react';
 import '../styles/Sidebar2.css';
 import config from '../config/config';
 
-const Sidebar2 = ({ emailQueryId, onToggle }) => {
-  console.log("emailQueryId", emailQueryId);
-   const [collapsed, setCollapsed] = useState(false); // State to manage collapse
+const Sidebar2 = ({ emailQueryId, whatsappQueryId, onToggle }) => {
+  const [collapsed, setCollapsed] = useState(false);
   const [agents, setAgents] = useState([]);
   const [teams, setTeams] = useState([]);
   const [formData, setFormData] = useState({
     email_query_id: emailQueryId,
+    whatsapp_query_id: whatsappQueryId,
     title: '',
     description: '',
     assignedAgentId: '',
@@ -22,30 +22,39 @@ const Sidebar2 = ({ emailQueryId, onToggle }) => {
   useEffect(() => {
     const fetchAgentsAndTeams = async () => {
       try {
-        const agentsResponse = await fetch(`${config.API_URL}/api/agents/`);
-        const teamsResponse = await fetch(`${config.API_URL}/api/teams/`);
+        const [agentsResponse, teamsResponse] = await Promise.all([
+          fetch(`${config.API_URL}/api/agents/`),
+          fetch(`${config.API_URL}/api/teams/`)
+        ]);
+
         if (!agentsResponse.ok || !teamsResponse.ok) {
           throw new Error('Failed to fetch agents or teams');
         }
+
         const agentsData = await agentsResponse.json();
         const teamsData = await teamsResponse.json();
+
         setAgents(agentsData.agents || []);
         setTeams(teamsData.teams || []);
       } catch (error) {
         console.error('Error fetching agents or teams:', error);
       }
     };
-    
 
     const fetchTaskDetails = async () => {
       try {
-        const response = await fetch(`${config.API_URL}/api/task-details/${emailQueryId}/`);
+        const queryId = emailQueryId || whatsappQueryId;
+        const queryType = emailQueryId ? 'email' : 'whatsapp';
+        const response = await fetch(
+          `${config.API_URL}/api/task-details/${queryType}/${queryId}/`
+        );
         if (!response.ok) {
           throw new Error('Failed to fetch task details');
         }
         const taskData = await response.json();
         if (taskData.status === 'success' && taskData.task) {
           setFormData({
+            ...formData,
             title: taskData.task.title || '',
             description: taskData.task.description || '',
             assignedAgentId: taskData.task.assigned_agent_id || '',
@@ -60,7 +69,8 @@ const Sidebar2 = ({ emailQueryId, onToggle }) => {
 
     fetchAgentsAndTeams();
     fetchTaskDetails();
-  }, [emailQueryId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [emailQueryId, whatsappQueryId]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -82,7 +92,8 @@ const Sidebar2 = ({ emailQueryId, onToggle }) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          email_query_id: formData.email_query_id,
+          email_query_id: formData.email_query_id || null,
+          whatsapp_query_id: formData.whatsapp_query_id || null,
           title: formData.title,
           description: formData.description,
           assigned_team_id: formData.assignedTeamId,
@@ -94,11 +105,11 @@ const Sidebar2 = ({ emailQueryId, onToggle }) => {
       const result = await response.json();
       if (response.ok) {
         setTaskMessage('Task assigned successfully!');
-        if (result.teams_status === 'success') {
-          setTeamsMessage('Task details sent to Teams successfully!');
-        } else {
-          setTeamsMessage('Failed to send task details to Teams.');
-        }
+        setTeamsMessage(
+          result.teams_status === 'success'
+            ? 'Task details sent to Teams successfully!'
+            : 'Failed to send task details to Teams.'
+        );
       } else {
         setTaskMessage(`Error: ${result.error}`);
       }
@@ -111,94 +122,102 @@ const Sidebar2 = ({ emailQueryId, onToggle }) => {
   };
 
   const handleToggle = () => {
-    setCollapsed(!collapsed);
-    if (onToggle) {
-      onToggle(!collapsed); // Call onToggle only if it is defined
-    }
+    setCollapsed((prevCollapsed) => !prevCollapsed); // Toggle the collapsed state
+    if (onToggle) onToggle(!collapsed); // Notify parent component of the new state
   };
 
-
   return (
-    <div className="sidebar2">
-      {/* Back link to /queries */}
-      <a href="/queries" className="sidebar2-back-link">
-        ← Back
-      </a>
-      {/* <button className="collapse-button" onClick={handleToggle}>
+    <div className={`sidebar2 ${collapsed ? 'collapsed' : ''}`}>
+      <button className="collapse-button" onClick={handleToggle}>
         {collapsed ? '>' : '<'}
-      </button> */}
-      <h2 className="sidebar2-title">Assign Task</h2>
-      <form onSubmit={handleSubmit} className="assign-task-form">
-        <div className="form-group">
-          <label htmlFor="title">Title</label>
-          <input
-            type="text"
-            id="title"
-            name="title"
-            value={formData.title}
-            onChange={handleInputChange}
-            required
-          />
-        </div>
-        <div className="form-group">
-          <label htmlFor="description">Description</label>
-          <textarea
-            id="description"
-            name="description"
-            value={formData.description}
-            onChange={handleInputChange}
-            required
-          ></textarea>
-        </div>
-        <div className="form-group">
-          <label htmlFor="assignedAgentId">Assign to Agent</label>
-          <select
-            id="assignedAgentId"
-            name="assignedAgentId"
-            value={formData.assignedAgentId}
-            onChange={handleInputChange}
-          >
-            <option value="">Select an agent</option>
-            {agents.map((agent) => (
-              <option key={agent.id} value={agent.id}>
-                {agent.name}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="form-group">
-          <label htmlFor="assignedTeamId">Assign to Team</label>
-          <select
-            id="assignedTeamId"
-            name="assignedTeamId"
-            value={formData.assignedTeamId}
-            onChange={handleInputChange}
-          >
-            <option value="">Select a team</option>
-            {teams.map((team) => (
-              <option key={team.id} value={team.id}>
-                {team.name}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="form-group">
-          <label htmlFor="dueDate">Due Date</label>
-          <input
-            type="date"
-            id="dueDate"
-            name="dueDate"
-            value={formData.dueDate}
-            onChange={handleInputChange}
-            required
-          />
-        </div>
-        <button type="submit" className="assign-task-button" disabled={loading}>
-          {loading ? 'Assigning...' : 'Assign Task'}
-        </button>
-        {taskMessage && <p className={`form-message ${taskMessage.includes('Error') ? 'error' : 'success'}`}>{taskMessage}</p>}
-        {teamsMessage && <p className={`form-message ${teamsMessage.includes('Failed') ? 'error' : 'success'}`}>{teamsMessage}</p>}
-      </form>
+      </button>
+      {!collapsed && (
+        <>
+          <a href="/queries" className="sidebar2-back-link">
+            ← Back
+          </a>
+          <h2 className="sidebar2-title">Assign Task</h2>
+          <form onSubmit={handleSubmit} className="assign-task-form">
+            <div className="form-group">
+              <label htmlFor="title">Title</label>
+              <input
+                type="text"
+                id="title"
+                name="title"
+                value={formData.title}
+                onChange={handleInputChange}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="description">Description</label>
+              <textarea
+                id="description"
+                name="description"
+                value={formData.description}
+                onChange={handleInputChange}
+                required
+              ></textarea>
+            </div>
+            <div className="form-group">
+              <label htmlFor="assignedAgentId">Assign to Agent</label>
+              <select
+                id="assignedAgentId"
+                name="assignedAgentId"
+                value={formData.assignedAgentId}
+                onChange={handleInputChange}
+              >
+                <option value="">Select an agent</option>
+                {agents.map((agent) => (
+                  <option key={agent.id} value={agent.id}>
+                    {agent.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="form-group">
+              <label htmlFor="assignedTeamId">Assign to Team</label>
+              <select
+                id="assignedTeamId"
+                name="assignedTeamId"
+                value={formData.assignedTeamId}
+                onChange={handleInputChange}
+              >
+                <option value="">Select a team</option>
+                {teams.map((team) => (
+                  <option key={team.id} value={team.id}>
+                    {team.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="form-group">
+              <label htmlFor="dueDate">Due Date</label>
+              <input
+                type="date"
+                id="dueDate"
+                name="dueDate"
+                value={formData.dueDate}
+                onChange={handleInputChange}
+                required
+              />
+            </div>
+            <button type="submit" className="assign-task-button" disabled={loading}>
+              {loading ? 'Assigning...' : 'Assign Task'}
+            </button>
+            {taskMessage && (
+              <p className={`form-message ${taskMessage.includes('Error') ? 'error' : 'success'}`}>
+                {taskMessage}
+              </p>
+            )}
+            {teamsMessage && (
+              <p className={`form-message ${teamsMessage.includes('Failed') ? 'error' : 'success'}`}>
+                {teamsMessage}
+              </p>
+            )}
+          </form>
+        </>
+      )}
     </div>
   );
 };

@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 from pathlib import Path
 import os
+from datetime import timedelta
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -46,6 +47,7 @@ INSTALLED_APPS = [
     'email_handler',
     'corsheaders',
     'django_celery_beat',
+    'django_celery_results',
 ]
 
 MIDDLEWARE = [
@@ -83,26 +85,26 @@ WSGI_APPLICATION = 'crm_system.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'sql_server.pyodbc',  # updated engine for SQL Server
-        'NAME': 'crm_system_db',  # Replace with your SQL Server database name
-        'USER': '',  # Replace with your SQL Server username
-        'PASSWORD': '',  # Replace with your SQL Server password
-        'HOST': r'DESKTOP-AR77EUE\SQLEXPRESS',  # Replace with your SQL Server host
-        'PORT': '1433',  # Default SQL Server port; update if needed
-        'OPTIONS': {
-            'driver': 'ODBC Driver 17 for SQL Server',  # Ensure driver is installed
-        },
-    }
-}
-
 # DATABASES = {
 #     'default': {
-#         'ENGINE': 'django.db.backends.sqlite3',
-#         'NAME': BASE_DIR / 'db.sqlite3',
+#         'ENGINE': 'sql_server.pyodbc',  # updated engine for SQL Server
+#         'NAME': 'crm_system_db',  # Replace with your SQL Server database name
+#         'USER': '',  # Replace with your SQL Server username
+#         'PASSWORD': '',  # Replace with your SQL Server password
+#         'HOST': r'DESKTOP-AR77EUE\SQLEXPRESS',  # Replace with your SQL Server host
+#         'PORT': '1433',  # Default SQL Server port; update if needed
+#         'OPTIONS': {
+#             'driver': 'ODBC Driver 17 for SQL Server',  # Ensure driver is installed
+#         },
 #     }
 # }
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    }
+}
 
 
 # Password validation
@@ -168,6 +170,24 @@ CORS_ALLOW_CREDENTIALS = True
 CELERY_BROKER_URL = 'redis://localhost:6379/0'  # Redis as the message broker
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_BACKEND = 'django-db' 
+# Celery Configuration Options
+CELERY_TIMEZONE = "Asia/Karachi"
+CELERY_TASK_TRACK_STARTED = True
+# CELERY_TASK_TIME_LIMIT = 30 * 60
+CELERY_TASK_SOFT_TIME_LIMIT = 25 * 60  # Grace period before hard kill
+
+CELERY_BEAT_SCHEDULE = {
+    'fetch-unread-emails-every-minute': {
+        'task': 'email_handler.tasks.fetch_unread_emails_task',  # Full path to the task function
+        'schedule': timedelta(minutes=1),  # Execute every 1 minute
+    },
+    'fetch-whatsapp-messages-every-minute': {
+        'task': 'email_handler.tasks.fetch_whatsapp_messages_task',  # Full path to the WhatsApp task
+        'schedule': timedelta(minutes=1),  # Execute every 1 minute
+    },
+}
+
 
 # WhatsApp API Settings
 WAAPI_API_KEY = os.getenv('WAAPI_API_KEY')
@@ -175,6 +195,7 @@ WAAPI_BASE_URL = os.getenv('WAAPI_BASE_URL', 'https://whatsapp.maxremind.com/api
 WAAPI_TIMEOUT = int(os.getenv('WAAPI_TIMEOUT', '30'))
 WAAPI_SSL_VERIFY = os.getenv('WAAPI_SSL_VERIFY', 'True').lower() == 'true'
 WAAPI_TEST_MODE = os.getenv('WAAPI_TEST_MODE', 'True').lower() == 'true'  # Add this line
+
 
 # Validate required settings
 if not WAAPI_API_KEY:

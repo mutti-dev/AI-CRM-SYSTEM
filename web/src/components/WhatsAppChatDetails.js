@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import axios from "axios";
 import { useParams } from "react-router-dom";
 import {
@@ -73,13 +73,11 @@ const MessageBubble = styled(Box)(({ isfromme }) => ({
 
 const WhatsAppChatDetails = () => {
   const { chatId, customer_name } = useParams();
-  console.log("Chat ID:", chatId);
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [showScrollButton, setShowScrollButton] = useState(false);
   const [replyContent, setReplyContent] = useState("");
-  console.log("Reply Content", replyContent);
+  const messagesEndRef = useRef(null);
 
   const fetchChatDetails = useCallback(async () => {
     setLoading(true);
@@ -87,7 +85,7 @@ const WhatsAppChatDetails = () => {
     try {
       const response = await axios.post(
         `${config.API_URL}/api/whatsapp/control_fetch/`,
-        { chatId, limit: 15 } // removed fromMe & includeMedia to fetch all messages
+        { chatId, limit: 50 }
       );
       if (response.data.status === "success") {
         const data = response.data.data.data.data;
@@ -103,23 +101,17 @@ const WhatsAppChatDetails = () => {
   }, [chatId]);
 
   useEffect(() => {
-    const handleScroll = () => {
-      setShowScrollButton(window.pageYOffset > 100);
-    };
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
-  useEffect(() => {
     fetchChatDetails();
-    // Removed polling to stop auto-refresh
-    // const intervalId = setInterval(fetchChatDetails, 5000);
-    // return () => clearInterval(intervalId);
   }, [fetchChatDetails]);
 
+  // Scroll to bottom on new message
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
   const handleReply = useCallback(async () => {
+    if (!replyContent.trim()) return;
     setLoading(true);
-    setError(null);
     try {
       const response = await axios.post(
         `${config.API_URL}/api/whatsapp/send_custom_message/`,
@@ -127,164 +119,132 @@ const WhatsAppChatDetails = () => {
       );
       if (response.data.status === "success") {
         setReplyContent("");
+        fetchChatDetails(); // Refresh chat
       } else {
-        setError(response.data.error || "Unknown error occurred");
+        setError(response.data.error || "Failed to send message");
       }
     } catch (err) {
       setError(err.message);
     } finally {
       setLoading(false);
     }
-  }, [chatId, replyContent]);
-
-  if (loading) {
-    return (
-      <Container maxWidth="md" sx={{ p: 3, mt: 4 }}>
-        {Array.from(new Array(5)).map((_, index) => (
-          <Box key={index} sx={{ display: "flex", gap: 2, mb: 3 }}>
-            <Skeleton variant="circular" width="40px" height="40px" />
-            <Skeleton variant="rounded" width="70%" height="80px" />
-          </Box>
-        ))}
-      </Container>
-    );
-  }
-
-  if (error) {
-    return (
-      <Container maxWidth="md" sx={{ mt: 4 }}>
-        <Alert
-          severity="error"
-          sx={{
-            borderRadius: 2,
-            boxShadow: 1,
-            backgroundColor: "#f8d7da",
-            color: "#721c24",
-            border: "1px solid #f5c6cb",
-          }}
-        >
-          <Typography variant="body1" fontWeight="bold">
-            Failed to load messages:
-          </Typography>
-          <Typography variant="body2">{error}</Typography>
-        </Alert>
-      </Container>
-    );
-  }
+  }, [chatId, replyContent, fetchChatDetails]);
 
   return (
     <Container
       maxWidth="md"
       sx={{
-        p: 3,
+        position: "relative",
+        pt: 10,
+        pb: 12,
         backgroundColor: "#1a1a1a",
         minHeight: "100vh",
-        borderRadius: 8,
+        borderRadius: 4,
         mt: 4,
-        boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+        overflow: "hidden",
       }}
     >
+      {/* Chat Header */}
       <Box
         sx={{
-          position: "sticky",
+          position: "fixed",
           top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 2,
           backgroundColor: "#1a1a1a",
+          px: 3,
           py: 2,
-          mb: 3,
-          borderRadius: 6,
-          boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
-          zIndex: 1,
+          borderBottom: "1px solid #333",
           display: "flex",
-          justifyContent: "space-between",
           alignItems: "center",
-          px: 2,
+          justifyContent: "space-between",
         }}
       >
         <Typography
-          variant="h5"
+          variant="h6"
+          color="white"
           fontWeight="bold"
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            gap: 1.5,
-          }}
+          sx={{ display: "flex", alignItems: "center", gap: 1 }}
         >
           <Person width="28" height="28" fill="white" />
-          Chat Session: {customer_name}
+          Chat: {customer_name}
         </Typography>
-        <Refresh
-          style={{
-            width: "30px",
-            height: "30px",
-            fill: loading ? "#ccc" : "#0084ff",
-            animation: loading ? `${spinAnimation} 1s linear infinite` : "none",
-            cursor: "pointer",
-          }}
-          onClick={fetchChatDetails}
-        />
+        <IconButton onClick={fetchChatDetails} disabled={loading}>
+          <Refresh
+            style={{
+              width: 24,
+              height: 24,
+              fill: loading ? "#999" : "#00b0ff",
+              animation: loading ? `${spinAnimation} 1s linear infinite` : "none",
+            }}
+          />
+        </IconButton>
       </Box>
 
-      <Grid container spacing={2}>
-        {messages.map((item, index) => {
+      {/* Message List */}
+      <Box
+        sx={{
+          display: "flex",
+          flexDirection: "column-reverse", // Inverted
+          gap: 2,
+          px: 2,
+          mt: 2,
+        }}
+      >
+        {[...messages].reverse().map((item, index) => {
           const message = item.message;
-          // Updated to use the new message property "fromMe"
           const isFromMe = message.fromMe;
 
           return (
-            <Grid item xs={12} key={index}>
-              <Box
-                sx={{
-                  display: "flex",
-                  flexDirection: isFromMe ? "row-reverse" : "row",
-                  alignItems: "flex-end",
-                  gap: 1.5,
-                }}
-              >
-                {!isFromMe && (
-                  <Avatar
-                    sx={{
-                      width: 40,
-                      height: 40,
-                      backgroundColor: "#007bff",
-                      color: "#fff",
-                      fontWeight: "bold",
-                    }}
-                  >
-                    {message.from[0]}
-                  </Avatar>
-                )}
-
-                <MessageBubble isfromme={isFromMe}>
-                  <Typography
-                    variant="body1"
-                    component="div"
-                    dangerouslySetInnerHTML={{
-                      __html: formatReplyContent(message.body),
-                    }}
-                  />
-                  <Box
-                    sx={{
-                      display: "flex",
-                      justifyContent: "flex-end",
-                      mt: 0.5,
-                    }}
-                  >
-                    <Typography
-                      variant="caption"
-                      sx={{ fontSize: "0.75rem", color: "#555" }}
-                    >
-                      {formatTime(message.timestamp)}
-                    </Typography>
-                  </Box>
-                </MessageBubble>
-              </Box>
-            </Grid>
+            <Box
+              key={index}
+              sx={{
+                display: "flex",
+                flexDirection: isFromMe ? "row-reverse" : "row",
+                alignItems: "flex-end",
+                gap: 1.5,
+              }}
+            >
+              {!isFromMe && (
+                <Avatar sx={{ backgroundColor: "#007bff", color: "#fff" }}>
+                  {message.from[0]}
+                </Avatar>
+              )}
+              <MessageBubble isfromme={isFromMe}>
+                <Typography
+                  variant="body1"
+                  component="div"
+                  dangerouslySetInnerHTML={{
+                    __html: formatReplyContent(message.body),
+                  }}
+                />
+                <Typography
+                  variant="caption"
+                  sx={{ display: "block", textAlign: "right", color: "#999", mt: 0.5 }}
+                >
+                  {formatTime(message.timestamp)}
+                </Typography>
+              </MessageBubble>
+            </Box>
           );
         })}
-      </Grid>
+        <div ref={messagesEndRef} />
+      </Box>
 
-      {/* Reply Input Section */}
-      <Box mt={4} p={2} bgcolor="#2d2d2d" borderRadius={2}>
+      {/* Input Box - Fixed at Bottom */}
+      <Box
+        sx={{
+          position: "fixed",
+          bottom: 0,
+          left: 0,
+          right: 0,
+          p: 2,
+          backgroundColor: "#1a1a1a",
+          borderTop: "1px solid #333",
+          zIndex: 3,
+        }}
+      >
         <Box display="flex" gap={1} alignItems="center">
           <Avatar sx={{ width: 40, height: 40 }}>
             {customer_name[0]?.toUpperCase() || "C"}
@@ -292,18 +252,19 @@ const WhatsAppChatDetails = () => {
           <TextField
             fullWidth
             multiline
-            minRows={1}
-            maxRows={5}
-            variant="outlined"
-            placeholder="Type your reply..."
+            maxRows={4}
+            placeholder="Type a message..."
             value={replyContent}
             onChange={(e) => setReplyContent(e.target.value)}
-            onKeyPress={(e) =>
-              e.key === "Enter" && !e.shiftKey && handleReply()
-            }
+            onKeyPress={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleReply();
+              }
+            }}
             sx={{
               "& .MuiOutlinedInput-root": {
-                backgroundColor: "#1a1a1a",
+                backgroundColor: "#2c2c2c",
                 color: "white",
                 "& fieldset": {
                   borderColor: "#444",
@@ -314,27 +275,20 @@ const WhatsAppChatDetails = () => {
               },
             }}
           />
-          <Tooltip title="Send reply">
+          <Tooltip title="Send">
             <IconButton
-              color="primary"
               onClick={handleReply}
               disabled={!replyContent.trim()}
+              color="primary"
             >
               <Send width="28" height="28" fill="white" />
             </IconButton>
           </Tooltip>
         </Box>
       </Box>
-
-      <Slide in={showScrollButton} direction="up">
-        <ScrollTopButton
-          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-        >
-          <KeyboardArrowUp />
-        </ScrollTopButton>
-      </Slide>
     </Container>
   );
 };
+
 
 export default WhatsAppChatDetails;

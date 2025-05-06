@@ -6,13 +6,10 @@ import {
   Avatar,
   TextField,
   IconButton,
-  CircularProgress,
-  Divider,
   Tooltip,
   useMediaQuery,
   Skeleton,
 } from "@mui/material";
-
 import { styled, keyframes } from "@mui/system";
 import config from "../config/config";
 import Sidebar2 from "./Sidebar2";
@@ -22,7 +19,6 @@ import ArrowBack from "../assets/svgs/ArrowBack";
 import Error from "../assets/svgs/Error";
 import Person from "../assets/svgs/Person";
 import Schedule from "../assets/svgs/Schedule";
-import ActionPanel from "./ActionPanel";
 import { formatReplyContent } from "../utils/formatReplyContent";
 
 const slideIn = keyframes`
@@ -44,19 +40,14 @@ const MessageBubble = styled(Box)(({ sent }) => ({
   color: "white",
   boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)",
   animation: `${slideIn} 0.3s ease`,
-  position: "relative",
   wordBreak: "break-word",
   marginBottom: "16px",
-  "&:hover": {
-    boxShadow: "0 2px 6px rgba(0, 0, 0, 0.15)",
-  },
 }));
 
 const DetailsScreen = () => {
   const { id } = useParams();
   const [email, setEmail] = useState(null);
   const [replies, setReplies] = useState([]);
-  console.log("Replies:", replies);
   const [replyContent, setReplyContent] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -64,12 +55,12 @@ const DetailsScreen = () => {
   const isMobile = useMediaQuery("(max-width:600px)");
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, 100); // Ensure it's after DOM render
   };
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [replies]);
+  useEffect(scrollToBottom, [replies]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -99,15 +90,11 @@ const DetailsScreen = () => {
 
   const handleReply = async () => {
     if (!replyContent.trim()) return;
-
     try {
       const response = await fetch(`${config.API_URL}/api/reply-email/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email_query_id: id,
-          content: replyContent,
-        }),
+        body: JSON.stringify({ email_query_id: id, content: replyContent }),
       });
 
       if (!response.ok) throw new Error("Failed to send reply");
@@ -124,14 +111,12 @@ const DetailsScreen = () => {
     return (
       <Box display="flex" height="100vh">
         <Box flex={1} p={3}>
-          <Box mb={4}>
-            <Skeleton variant="rectangular" width={300} height="40px" />
-            <Skeleton variant="text" width={200} />
-          </Box>
+          <Skeleton width={300} height={40} />
+          <Skeleton width={200} />
           {[...Array(3)].map((_, i) => (
             <Box key={i} display="flex" gap={2} mb={3}>
-              <Skeleton variant="circular" width="40px" height="40px" />
-              <Skeleton variant="rounded" width="70%" height="100px" />
+              <Skeleton variant="circular" width={40} height={40} />
+              <Skeleton width="70%" height={100} />
             </Box>
           ))}
         </Box>
@@ -184,28 +169,30 @@ const DetailsScreen = () => {
         height="100vh"
         overflow="hidden"
       >
-        {/* Header Section - Fixed height */}
+        {/* Header */}
         <Box
+          position="sticky"
+          top={0}
+          zIndex={2}
           p={isMobile ? 1 : 2}
           bgcolor="#2d2d2d"
           boxShadow={1}
-          flexShrink={0}
         >
           <Box display="flex" alignItems="center" gap={2} mb={1}>
             <ArrowBack width="28" height="28" fill="white" />
-            <Typography variant="h5" fontWeight="bold" color="white" noWrap>
+            <Typography variant="h6" fontWeight="bold" color="white" noWrap>
               {email.subject}
             </Typography>
           </Box>
           <Box display="flex" alignItems="center" gap={1}>
-            <Person width="28" height="28" fill="white" />
-            <Typography variant="body2" color="white" noWrap>
+            <Person width="20" height="20" fill="white" />
+            <Typography variant="body2" color="white">
               From: {email.sender}
             </Typography>
           </Box>
         </Box>
 
-        {/* Messages Container - Flexible space with scroll */}
+        {/* Messages */}
         <Box
           flex={1}
           overflow="auto"
@@ -214,12 +201,11 @@ const DetailsScreen = () => {
           display="flex"
           flexDirection="column"
         >
-          {/* Original Email */}
+          {/* Original email */}
           <Box display="flex" justifyContent="flex-start">
             <MessageBubble sent={false}>
               <Typography
                 variant="body1"
-                component="div"
                 dangerouslySetInnerHTML={{
                   __html: formatReplyContent(email.body),
                 }}
@@ -236,14 +222,9 @@ const DetailsScreen = () => {
           {/* Replies */}
           {replies.map((reply, index) => (
             <Box key={index} display="flex" justifyContent="flex-end">
-              <MessageBubble sent={true}>
-                {/* <Typography variant="body1" paragraph color="white">
-                  {formatReplyContent(reply.content)}
-                </Typography> */}
-
+              <MessageBubble sent>
                 <Typography
                   variant="body1"
-                  component="div"
                   dangerouslySetInnerHTML={{
                     __html: formatReplyContent(reply.content),
                   }}
@@ -252,6 +233,7 @@ const DetailsScreen = () => {
                   display="flex"
                   alignItems="center"
                   gap={1}
+                  mt={1}
                   justifyContent="flex-end"
                 >
                   <Schedule width="16" height="16" fill="#aaa" />
@@ -265,19 +247,25 @@ const DetailsScreen = () => {
           <div ref={messagesEndRef} />
         </Box>
 
-        {/* Reply Input - Fixed height */}
-        <Box p={isMobile ? 1 : 2} bgcolor="#2d2d2d" flexShrink={0}>
+        {/* Reply Input */}
+        <Box
+          position="sticky"
+          bottom={0}
+          zIndex={2}
+          p={isMobile ? 1 : 2}
+          bgcolor="#2d2d2d"
+        >
           <Box display="flex" gap={1} alignItems="center">
             <Avatar sx={{ width: 40, height: 40 }}>
-              {email.sender[0].toUpperCase()}
+              {email.sender?.[0]?.toUpperCase() || "U"}
             </Avatar>
             <TextField
               fullWidth
               multiline
               minRows={1}
-              maxRows={100}
-              variant="outlined"
+              maxRows={4}
               placeholder="Type your reply..."
+              variant="outlined"
               value={replyContent}
               onChange={(e) => setReplyContent(e.target.value)}
               onKeyPress={(e) =>

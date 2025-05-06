@@ -15,7 +15,7 @@ import { useNavigate } from "react-router-dom";
 import "../styles/Queries.css";
 import "../styles/FetchEmailsButton.css";
 import config from "../config/config";
-import FetchEmailsButton from "./FetchEmailsButton";
+
 import TicketTabs from "./TicketTabs";
 import { formatTime } from "../utils/formatTime";
 import Sidebar from "./Sidebar";
@@ -96,11 +96,7 @@ const Queries = () => {
     navigate(`/details/${id}`);
   };
 
-  const handleEmailsFetched = (newEmails) => {
-    setEmails((prevEmails) => [...newEmails, ...prevEmails]);
-    setFilteredEmails((prevEmails) => [...newEmails, ...prevEmails]);
-  };
-
+ 
   const uniqueCustomers = [
     ...new Set(emails.map((email) => email.customer__name)),
   ];
@@ -129,7 +125,7 @@ const Queries = () => {
     <div>
       <div className="queries-header">
         <TicketTabs />
-        <FetchEmailsButton onEmailsFetched={handleEmailsFetched} />
+
       </div>
 
       <div className="filters-container">

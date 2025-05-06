@@ -1,50 +1,110 @@
-/* App.css */
-/* .App {
-  height: 120vh;
+:root {
+  --sidebar-width: 280px;
+  --sidebar-collapsed-width: 60px;
+  --action-panel-width: 300px;
+  --transition-timing: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.App {
+  height: 100vh;
   background-color: #1a1a1a;
   color: #ffffff;
-} */
-
-.App-main {
-  transition: margin-left 0.5s ease, width 0.5s ease;
-  flex-grow: 1;
-  padding-right: 300px;
-  overflow-y: auto;
+  overflow: hidden;
 }
 
 .App-container {
   display: flex;
+  flex-direction: row;
   min-height: 100vh;
-  overflow: hidden;
   position: relative;
-}
-/* .action-panel {
-  width: 280px;
-  background-color: #2a2a2a;
-  padding: 16px;
-  border-left: 1px solid #333;
-  display: flex;
-  flex-direction: column;
-} */
-
-.App-main.expanded {
-  margin-left: 80px; /* Adjust for collapsed sidebar width */
-  width: calc(100% - 60px);
+  background-color: #1a1a1a;
 }
 
 .App-main {
   flex: 1;
-  padding: 60px;
-  margin-left: 280px;
-  background-color: #1a1a1a;
+  padding: 2rem;
+  margin-left: var(--sidebar-width);
+  margin-right: 300px; /* Add margin to prevent overlap */
+  transition: margin var(--transition-timing),
+              padding var(--transition-timing);
   overflow-y: auto;
-  height: calc(100vh - 60px); 
+  height: 100vh;
+  will-change: margin, padding;
+  position: relative;
 }
 
-/* Responsive handling */
+.App-main.expanded {
+  margin-left: var(--sidebar-collapsed-width);
+  margin-right: 0; /* Adjust margin when action panel is hidden */
+  padding-right: var(--action-panel-width);
+}
+
+.action-panel {
+  position: fixed;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 300px; /* Set a fixed width */
+  background-color: #1a1a1a;
+  color: white;
+  padding: 20px;
+  overflow-y: auto;
+  z-index: 1000; /* Ensure it stays above other content */
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1a1a1a;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #444;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
 @media (max-width: 768px) {
   .App-main {
-    margin-left: 0;
-    padding: 20px;
+    margin-left: 0 !important;
+    padding: 1rem !important;
+    width: 100% !important;
   }
+
+  .action-panel {
+    width: 100%;
+    transform: translateX(100%);
+  }
+
+  .action-panel-visible {
+    transform: translateX(0);
+  }
+
+  .sidebar2 {
+    width: 100%;
+    position: relative;
+  }
+
+  .App-main {
+    margin-left: 0;
+  }
+
+  .action-panel {
+    width: 100%;
+    position: relative;
+  }
+}
+
+/* Smooth transitions for all interactive elements */
+* {
+  transition: background-color 0.2s ease,
+              border-color 0.2s ease,
+              opacity 0.2s ease;
 }

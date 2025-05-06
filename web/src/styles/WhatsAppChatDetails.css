@@ -36,3 +36,29 @@
   text-align: right;
   color: #aaa;
 }
+
+.chat-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 20px;
+  background-color: #1a1a1a;
+  color: white;
+  overflow-y: auto;
+  height: calc(100vh - 150px); /* Adjust height to fit within the viewport */
+}
+
+.message-bubble {
+  max-width: 70%;
+  padding: 10px;
+  border-radius: 10px;
+  background-color: #dcf8c6;
+  color: black;
+  word-wrap: break-word;
+}
+
+.message-bubble.from-me {
+  background-color: #007bff;
+  color: white;
+  align-self: flex-end;
+}

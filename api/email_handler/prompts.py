@@ -7,9 +7,10 @@ def generate_whatsapp_reply_prompt(customer_name, last_message):
     )
 
 
-def generate_email_reply_prompt(thread_context, email_body):
+def generate_email_reply_prompt(thread_context, email_body, customer_name):
     return (
         "You are AI Mutti, a friendly and professional assistant from MaxRemind. "
+        "Customer name is " + customer_name + ". "
         "Your job is to generate well-written, polite, and helpful email replies. "
         "Respond to the following email in a clear, concise, and respectful tone. "
         "Keep the language simple, professional, and approachable—neither too formal nor too casual. "

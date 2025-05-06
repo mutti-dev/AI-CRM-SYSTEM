@@ -20,19 +20,18 @@ function App() {
   console.log("id from APP", id);
   const location = useLocation();
   const [isSidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const showActionPanelRoutes = ["/details", "/whatsapp-chat"];
-
-  const shouldShowActionPanel = showActionPanelRoutes.some((route) =>
-    location.pathname.startsWith(route)
-  );
 
   return (
     <div className="App">
       <div className="App-container">
+        {/* Render Sidebar2 only for /details/:id */}
         {location.pathname.startsWith("/details") ? (
-          <Sidebar2 onToggle={setSidebarCollapsed} emailQueryId={id} />
+          <Sidebar2
+            onToggle={setSidebarCollapsed}
+            emailQueryId={id} // Pass the id to Sidebar2
+          />
         ) : (
-          <Sidebar onToggle={setSidebarCollapsed} emailQueryId={id} />
+          <Sidebar onToggle={setSidebarCollapsed} />
         )}
 
         <main className={`App-main ${isSidebarCollapsed ? "expanded" : ""}`}>
@@ -51,12 +50,12 @@ function App() {
           </Routes>
         </main>
 
-        {/* 👉 Stick ActionPanel to right side if route matches */}
-        {shouldShowActionPanel && (
-    <div className="action-panel">
-      <ActionPanel />
-    </div>
-  )}
+        {/* Stick ActionPanel to right side if route matches */}
+        {location.pathname.startsWith("/details") && (
+          <div className="action-panel">
+            <ActionPanel />
+          </div>
+        )}
       </div>
     </div>
   );

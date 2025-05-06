@@ -148,7 +148,7 @@ class WhatsAppClient:
         Send a custom message to the specified chat using a different endpoint.
         """
         try:
-            send_message_url = "https://waapi.app/api/v1/instances/61793/client/action/send-message"
+            send_message_url = f"{self.base_url}/client/action/send-message"
             payload = {
                 "chatId": chatId,
                 "message": message
