@@ -41,14 +41,16 @@ class WhatsAppClient:
                 headers=self.headers,
                 json=self.payload,
             )
+
             print(f"Status Code: {response.status_code}")
-            
             chats = response.json()
 
-            # Save to text file (pretty JSON string)
-            with open("chats_response.txt", "w", encoding="utf-8") as file:
-                file.write(json.dumps(chats, indent=2))
-            
+            # Save full response as formatted JSON
+            # file_path = "chats_response.txt"
+            # with open(file_path, "w", encoding="utf-8") as file:
+            #     json.dump(chats, file, indent=4, ensure_ascii=False)
+
+            # print(f"Saved chat response to {file_path}")
             return chats
 
         except Exception as e:
@@ -147,6 +149,9 @@ class WhatsAppClient:
         """
         Send a custom message to the specified chat using a different endpoint.
         """
+        print("message", message)
+        print("chatId", chatId)
+        
         try:
             send_message_url = f"{self.base_url}/client/action/send-message"
             payload = {
