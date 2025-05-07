@@ -8,11 +8,13 @@ import json
 from datetime import datetime
 import pytz
 from django.utils.timezone import make_aware
-from ..genai import client
+from ..ai.chat_history import client, MODEL_NAME  # Updated import for AI responses
 from ..prompts import generate_whatsapp_reply_prompt
 
 whatsapp_client = WhatsAppClient()
 logger = logging.getLogger(__name__)
+
+
 
 
 
@@ -40,10 +42,10 @@ def fetch_whatsapp_messages(request):
             timestamp = item.get("timestamp", None)
             from_me = last_message_data.get("id", {}).get("fromMe", True)
 
-            logger.info(f"Processing message: ID={whatsapp_id}, fromMe={from_me}, body='{last_message}'")
+            logger.info(f"Processing message: ID={whatsapp_id}, fromMe={from_me}, body={repr(last_message)}")
 
             if not user_id or not timestamp or not last_message:
-                logger.warning(f"Skipping incomplete message. user_id={user_id}, timestamp={timestamp}, body='{last_message}'")
+                logger.warning(f"Skipping incomplete message. user_id={user_id}, timestamp={timestamp}, body={repr(last_message)}")
                 continue
 
             received_at = make_aware(datetime.fromtimestamp(int(timestamp)))
@@ -51,7 +53,6 @@ def fetch_whatsapp_messages(request):
             # Match using phone number only (user_id)
             customer = Customer.objects.filter(phone_number=user_id).first()
             if not customer:
-                # logger.info(f"No customer found for phone: {user_id}")
                 continue
 
             # Save or update message
@@ -80,10 +81,18 @@ def fetch_whatsapp_messages(request):
                 if not from_me:
                     try:
                         prompt = generate_whatsapp_reply_prompt(customer.name, last_message)
-                        gen_response = client.models.generate_content(
-                            model="gemini-2.0-flash", contents=prompt
+                        
+                        # Use the correct 'messages' format for the OpenAI client
+                        messages = [
+                            {"role": "system", "content": "You are an AI assistant helping with WhatsApp replies."},
+                            {"role": "user", "content": prompt}
+                        ]
+                        gen_response = client.chat.completions.create(
+                            model=MODEL_NAME,
+                            messages=messages
                         )
-                        message = gen_response.text.strip()
+                        # Correctly access the content of the response
+                        message = gen_response.choices[0].message.content.strip()
                         whatsapp_client.send_custom_message(whatsapp_id, message)
                         logger.info(f"AI reply sent to {whatsapp_id}")
 

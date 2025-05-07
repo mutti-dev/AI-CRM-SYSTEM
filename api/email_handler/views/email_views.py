@@ -4,11 +4,15 @@ from django.shortcuts import get_object_or_404
 from django.utils.timezone import now
 from ..models import EmailQuery, EmailReply, EmailLog, FAQ, Customer
 from ..email_integration.gmail_client import GmailClient
-from ..genai import client
+from ..ai.chat_history import client, MODEL_NAME  # Updated import for AI responses
 from ..prompts import generate_email_reply_prompt
 import json
 import logging
 import re
+
+
+
+
 
 gmail_client = GmailClient()
 logger = logging.getLogger(__name__)
@@ -21,7 +25,7 @@ def fetch_unread_emails(request):
         valid_emails = []
 
         for email in emails:
-            logging.debug("Processing email: %s", email)
+            # logging.debug("Processing email: %s", email)
 
             if 'threadId' not in email:
                 logging.error("Missing 'threadId' in email: %s", email)
@@ -35,7 +39,7 @@ def fetch_unread_emails(request):
             else:
                 sender_email = sender_email.strip()
 
-            logging.debug("Extracted sender email: %s", sender_email)
+            # logging.debug("Extracted sender email: %s", sender_email)
 
             # Check if the sender exists in the Customer table
             customer = Customer.objects.filter(email=sender_email).first()
@@ -43,8 +47,8 @@ def fetch_unread_emails(request):
                 # Check if the email thread already exists
                 existing_query = EmailQuery.objects.filter(gmail_thread_id=email['threadId']).first()
                 if existing_query:
-                    logging.info("Email thread already exists: %s", email['threadId'])
-                    continue
+                    # logging.info("Email thread already exists: %s", email['threadId'])
+                    pass
 
                 # Create a new EmailQuery
                 EmailQuery.objects.create(
@@ -62,12 +66,21 @@ def fetch_unread_emails(request):
                     # Fetch previous email content in the thread for context
                     previous_emails = EmailQuery.objects.filter(gmail_thread_id=email['threadId']).values_list('content', flat=True)
                     thread_context = "\n\n".join(previous_emails)
-                    prompt = generate_email_reply_prompt(thread_context, email.get('body', ''))
-                    response = client.models.generate_content(
-                        model="gemini-2.0-flash",
-                        contents=prompt
+                    prompt = generate_email_reply_prompt(thread_context, email.get('body', ''), customer.name)
+                    
+                    # Use the correct 'messages' format for the OpenAI client
+                    messages = [
+                        {"role": "system", "content": "You are an AI assistant helping with email replies."},
+                        {"role": "user", "content": prompt}
+                    ]
+                    response = client.chat.completions.create(
+                        model=MODEL_NAME,
+                        messages=messages
                     )
-                    reply_content = response.text
+                    # Correctly access the content of the response
+                    reply_content = response.choices[0].message.content.strip()
+
+                    logging.debug("Generated reply content: %s", reply_content)
 
                     gmail_message_id = gmail_client.send_reply(
                         to_email=sender_email,
@@ -87,7 +100,8 @@ def fetch_unread_emails(request):
                 except Exception as e:
                     logging.error("Failed to send auto-reply for email %s: %s", email['threadId'], e)
             else:
-                logging.debug("Sender not found in Customer table: %s", sender_email)
+                # logging.debug("Sender not found in Customer table: %s", sender_email)
+                print("Not found email")
 
         return JsonResponse({
             'status': 'success',
@@ -96,6 +110,11 @@ def fetch_unread_emails(request):
             'emails': valid_emails
         })
     return JsonResponse({'error': 'Invalid request method'}, status=400)
+
+
+
+
+
 
 @csrf_exempt
 def process_queries(request):
@@ -119,10 +138,12 @@ def process_queries(request):
                         break
 
                 if not matched:
-                    reply_content = (
-                        "Thank you for reaching out to us. "
-                        "We have received your query and will get back to you shortly."
+                    prompt = generate_email_reply_prompt(query.content, "")
+                    response = client.models.generate_content(
+                        model=MODEL_NAME,
+                        contents=prompt
                     )
+                    reply_content = response.text.strip()
 
                 # Send the reply via Gmail
                 gmail_message_id = gmail_client.send_reply(
