@@ -2,6 +2,7 @@ import os
 import base64
 import re  # Add this import for regular expressions
 from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart  # Add this import for multipart messages
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
@@ -187,7 +188,8 @@ class GmailClient:
     def send_reply(self, to_email, subject, body, thread_id, message_id=None):
         logging.debug("Sending reply to: %s, Subject: %s", to_email, subject)
         try:
-            message = MIMEText(body)
+            # Create a MIME message
+            message = MIMEMultipart("alternative")
             message['to'] = to_email
             message['subject'] = subject
 
@@ -195,6 +197,9 @@ class GmailClient:
             if message_id:
                 message['In-Reply-To'] = message_id
                 message['References'] = message_id
+
+            # Attach the HTML body
+            message.attach(MIMEText(body, "html"))
 
             raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode()
 
@@ -234,15 +239,18 @@ class GmailClient:
     def reply_to_thread(self, to_email, subject, body, thread_id, message_id=None):
         logging.debug("Sending reply to thread: %s", thread_id)
         try:
-            message = MIMEText(body)
+            # Create a MIME message
+            message = MIMEMultipart("alternative")
             message['to'] = to_email
             message['subject'] = subject
-            
-            
+
             # Add In-Reply-To and References headers if replying to a specific message
             if message_id:
                 message['In-Reply-To'] = message_id
                 message['References'] = message_id
+
+            # Attach the HTML body
+            message.attach(MIMEText(body, "html"))
 
             raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode()
 

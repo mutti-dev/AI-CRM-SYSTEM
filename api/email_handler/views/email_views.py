@@ -10,6 +10,9 @@ from ..prompts import generate_email_reply_prompt
 import json
 import logging
 import re
+import base64
+import time  # Add this import for retry delays
+import httpx
 
 gmail_client = GmailClient()
 logger = logging.getLogger(__name__)
@@ -71,40 +74,52 @@ def fetch_unread_emails(request):
 
                 # Automatically send a reply using GenAI
                 try:
-                    # Fetch previous email content in the thread for context
-                    previous_emails = EmailQuery.objects.filter(gmail_thread_id=email['threadId']).values_list('content', flat=True)
-                    thread_context = "\n\n".join(previous_emails)
-                    prompt = generate_email_reply_prompt(thread_context, email.get('body', ''), customer.name)
-                    
-                    # Use the correct 'messages' format for the OpenAI client
-                    messages = [
-                        {"role": "system", "content": "You are an AI assistant helping with email replies."},
-                        {"role": "user", "content": prompt}
-                    ]
-                    response = client.chat.completions.create(
-                        model=MODEL_NAME,
-                        messages=messages
-                    )
-                    # Correctly access the content of the response
-                    reply_content = response.choices[0].message.content.strip()
+                    # Retry logic for network errors
+                    max_retries = 3
+                    retry_count = 0
+                    while retry_count < max_retries:
+                        try:
+                            # Fetch previous email content in the thread for context
+                            previous_emails = EmailQuery.objects.filter(gmail_thread_id=email['threadId']).values_list('content', flat=True)
+                            thread_context = "\n\n".join(previous_emails)
+                            prompt = generate_email_reply_prompt(thread_context, email.get('body', ''), customer.name)
 
-                    logging.debug("Generated reply content: %s", reply_content)
+                            # Use the correct 'messages' format for the OpenAI client
+                            messages = [
+                                {"role": "system", "content": "You are an AI assistant helping with email replies."},
+                                {"role": "user", "content": prompt}
+                            ]
+                            response = client.chat.completions.create(
+                                model=MODEL_NAME,
+                                messages=messages
+                            )
+                            # Correctly access the content of the response
+                            reply_content = response.choices[0].message.content.strip()
 
-                    gmail_message_id = gmail_client.send_reply(
-                        to_email=sender_email,
-                        subject=f"Re: {email.get('subject', 'No Subject')}",
-                        body=reply_content,
-                        thread_id=email['threadId']
-                    )
-                    logging.info("Auto-reply sent for email: %s", email['threadId'])
+                            logging.debug("Generated reply content: %s", reply_content)
 
-                    # Save the reply in EmailReply
-                    EmailReply.objects.create(
-                        email_query=EmailQuery.objects.get(gmail_thread_id=email['threadId']),
-                        content=reply_content,
-                        sent_at=now(),
-                        gmail_message_id=gmail_message_id
-                    )
+                            gmail_message_id = gmail_client.send_reply(
+                                to_email=sender_email,
+                                subject=f"Re: {email.get('subject', 'No Subject')}",
+                                body=reply_content,
+                                thread_id=email['threadId']
+                            )
+                            logging.info("Auto-reply sent for email: %s", email['threadId'])
+
+                            # Save the reply in EmailReply
+                            EmailReply.objects.create(
+                                email_query=EmailQuery.objects.get(gmail_thread_id=email['threadId']),
+                                content=reply_content,
+                                sent_at=now(),
+                                gmail_message_id=gmail_message_id
+                            )
+                            break  # Exit retry loop on success
+                        except httpx.ConnectError as e:
+                            retry_count += 1
+                            logging.error(f"Connection error, retrying {retry_count}/{max_retries}: {e}")
+                            time.sleep(2)  # Wait before retrying
+                            if retry_count == max_retries:
+                                raise
                 except Exception as e:
                     logging.error("Failed to send auto-reply for email %s: %s", email['threadId'], e)
             else:
@@ -203,9 +218,83 @@ def reply_to_email(request):
             if not reply_content:
                 return JsonResponse({'error': 'Reply content cannot be empty'}, status=400)
 
-            # Add email signature and format content
-            formatted_content = f"{reply_content}\n\nBest regards,\nMaxRemind Team"
-            
+            # Apply the styled HTML template
+            formatted_content = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta name='viewport' content='width=device-width, initial-scale=1'>
+                <style>
+                    body {{ 
+                        font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; 
+                        line-height: 1.6; 
+                        color: #2d3748; 
+                        margin: 0;
+                        background-color: #f7fafc;
+                    }}
+                    .header {{ 
+                        background-color: #ffffff;
+                        padding: 2rem 1rem;
+                        text-align: center;
+                        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                    }}
+                    .logo {{
+                        height: 40px;
+                        width: auto;
+                        max-width: 240px;
+                    }}
+                    .content {{ 
+                        max-width: 800px;
+                        margin: 2rem auto;
+                        padding: 2rem;
+                        background: white;
+                        border-radius: 8px;
+                        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+                    }}
+                    .footer {{ 
+                        text-align: center;
+                        padding: 2rem 1rem;
+                        color: #718096;
+                        font-size: 0.875rem;
+                        border-top: 1px solid #e2e8f0;
+                        margin-top: 2rem;
+                    }}
+                    a {{
+                        color: #2171b5;
+                        text-decoration: none;
+                        font-weight: 500;
+                    }}
+                    a:hover {{
+                        text-decoration: underline;
+                    }}
+                    @media (max-width: 640px) {{
+                        .content {{
+                            margin: 1rem;
+                            padding: 1.5rem;
+                        }}
+                        .header {{
+                            padding: 1.5rem 1rem;
+                        }}
+                    }}
+                </style>
+            </head>
+            <body>
+                <div class='header'>
+                    <img src='https://maxremind.com/wp-content/uploads/2024/07/Maxremind-HD-Logo-min-1536x271.png' 
+                         alt='MaxRemind Logo' 
+                         class='logo'>
+                </div>
+                <div class='content'>
+                    {reply_content}
+                </div>
+                <div class='footer'>
+                    © 2024 MaxRemind. All rights reserved.<br>
+                    <span style='font-size: 0.75rem; color: #a0aec0;'>Need help? Contact our support team</span>
+                </div>
+            </body>
+            </html>
+            """
+
             # Retry mechanism for Gmail API
             max_retries = 3
             retry_count = 0
@@ -324,10 +413,16 @@ def download_attachment(request, email_id, attachment_id):
         if not attachment_data:
             return JsonResponse({'error': 'Attachment not found'}, status=404)
 
-        # Prepare the response
-        response = HttpResponse(attachment_data['data'], content_type=attachment_data['mimeType'])
-        response['Content-Disposition'] = f'attachment; filename="{attachment_data["filename"]}"'
-        return response
+        # Encode the attachment data in base64
+        base64_data = base64.b64encode(attachment_data['data']).decode('utf-8')
+
+        # Return the base64-encoded data in the JSON response
+        return JsonResponse({
+            'status': 'success',
+            'filename': attachment_data['filename'],
+            'mimeType': attachment_data['mimeType'],
+            'base64': f"data:{attachment_data['mimeType']};base64,{base64_data}"
+        })
     except Exception as e:
-        logging.error(f"Error downloading attachment {attachment_id} for email {email_id}: {e}")
-        return JsonResponse({'error': 'Failed to download attachment'}, status=500)
+        logging.error(f"Error fetching attachment {attachment_id} for email {email_id}: {e}")
+        return JsonResponse({'error': 'Failed to fetch attachment'}, status=500)
