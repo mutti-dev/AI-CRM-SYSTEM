@@ -192,7 +192,7 @@ CELERY_BEAT_SCHEDULE = {
         'schedule': timedelta(minutes=1),  # Execute every 1 minute
     },
     'fetch-whatsapp-messages-every-minute': {
-        'task': 'email_handler.tasks.fetch_whatsapp_messages_task',  # Full path to the WhatsApp task
+        'task': 'whatsapp_handler.tasks.fetch_whatsapp_messages_task',  # Full path to the WhatsApp task
         'schedule': timedelta(minutes=1),  # Execute every 1 minute
     },
 }
