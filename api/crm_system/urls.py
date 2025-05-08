@@ -17,6 +17,7 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from email_handler import views
+from email_handler.views import download_attachment
 
 # Customize admin site headers
 admin.site.site_header = "MaxRemind CRM Admin"
@@ -49,5 +50,5 @@ urlpatterns = [
     path('api/whatsapp/control_fetch/', views.get_whatsapp_messages_control, name='get_whatsapp_messages_control'),
     path('api/whatsapp/send_custom_message/', views.send_custom_message_view, name='send_custom_message_view'),
 
-
+    path('api/download_attachment/<str:email_id>/<str:attachment_id>/', download_attachment, name='download_attachment'),
 ]

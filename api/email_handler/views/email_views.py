@@ -1,18 +1,15 @@
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_GET
 from django.shortcuts import get_object_or_404
 from django.utils.timezone import now
-from ..models import EmailQuery, EmailReply, EmailLog, FAQ, Customer
+from ..models import EmailQuery, EmailReply, EmailLog, FAQ, Customer, EmailAttachment
 from ..email_integration.gmail_client import GmailClient
 from ..ai.chat_history import client, MODEL_NAME  # Updated import for AI responses
 from ..prompts import generate_email_reply_prompt
 import json
 import logging
 import re
-
-
-
-
 
 gmail_client = GmailClient()
 logger = logging.getLogger(__name__)
@@ -47,17 +44,28 @@ def fetch_unread_emails(request):
                 # Check if the email thread already exists
                 existing_query = EmailQuery.objects.filter(gmail_thread_id=email['threadId']).first()
                 if existing_query:
-                    # logging.info("Email thread already exists: %s", email['threadId'])
-                    pass
+                    logging.info("Email thread already exists: %s", email['threadId'])
+                    continue  # Skip creating a new EmailQuery
 
                 # Create a new EmailQuery
-                EmailQuery.objects.create(
+                email_query = EmailQuery.objects.create(
                     customer=customer,
                     subject=email.get('subject', 'No Subject'),
                     content=email.get('body', ''),
                     received_at=now(),
                     gmail_thread_id=email['threadId']
                 )
+
+                # Save attachments in the database
+                for attachment in email.get('attachments', []):
+                    EmailAttachment.objects.create(
+                        email_query=email_query,
+                        filename=attachment['filename'],
+                        mime_type=attachment['mimeType'],
+                        size=attachment['size'],
+                        download_url=attachment['download_url']
+                    )
+
                 emails_fetched += 1
                 valid_emails.append(email)
 
@@ -110,11 +118,6 @@ def fetch_unread_emails(request):
             'emails': valid_emails
         })
     return JsonResponse({'error': 'Invalid request method'}, status=400)
-
-
-
-
-
 
 @csrf_exempt
 def process_queries(request):
@@ -286,7 +289,16 @@ def fetch_email_details(request, id):
                 'body': email.content,
                 'received_at': email.received_at,
                 'thread_id': email.gmail_thread_id,
-                'thread_messages': thread_messages
+                'thread_messages': thread_messages,
+                'attachments': [
+                    {
+                        'filename': attachment.get('filename'),
+                        'mimeType': attachment.get('mimeType'),
+                        'size': attachment.get('size'),
+                        'download_url': attachment.get('download_url')
+                    }
+                    for attachment in thread_messages[-1].get('attachments', [])
+                ] if thread_messages else []
             }
             return JsonResponse({'status': 'success', 'email': email_details})
         except EmailQuery.DoesNotExist:
@@ -303,3 +315,19 @@ def fetch_email_replies(request, id):
         except EmailQuery.DoesNotExist:
             return JsonResponse({'error': 'Email not found'}, status=404)
     return JsonResponse({'error': 'Invalid request method'}, status=400)
+
+@require_GET
+def download_attachment(request, email_id, attachment_id):
+    try:
+        # Fetch the attachment data from Gmail
+        attachment_data = gmail_client.get_attachment(email_id, attachment_id)
+        if not attachment_data:
+            return JsonResponse({'error': 'Attachment not found'}, status=404)
+
+        # Prepare the response
+        response = HttpResponse(attachment_data['data'], content_type=attachment_data['mimeType'])
+        response['Content-Disposition'] = f'attachment; filename="{attachment_data["filename"]}"'
+        return response
+    except Exception as e:
+        logging.error(f"Error downloading attachment {attachment_id} for email {email_id}: {e}")
+        return JsonResponse({'error': 'Failed to download attachment'}, status=500)

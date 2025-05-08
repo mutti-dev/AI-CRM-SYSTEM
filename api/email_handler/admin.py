@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Team, Agent, Customer, FAQ, EmailQuery, EmailReply, Task, EmailLog, FineTunedDataset, WhatsAppReply, WhatsAppMessage
+from .models import Team, Agent, Customer, FAQ, EmailQuery, EmailReply, Task, EmailLog, FineTunedDataset, WhatsAppReply, WhatsAppMessage, EmailAttachment
 
 @admin.register(Customer)
 class CustomerAdmin(admin.ModelAdmin):
@@ -15,6 +15,7 @@ admin.site.register(EmailQuery)
 admin.site.register(EmailReply)
 admin.site.register(Task)
 admin.site.register(EmailLog)
+admin.site.register(EmailAttachment)
 # admin.site.register(FineTunedDataset)
 admin.site.register(WhatsAppMessage)
 admin.site.register(WhatsAppReply)

@@ -109,8 +109,6 @@ class GmailClient:
             payload = msg['payload']
             headers = payload['headers']
 
-            # Save payload to a file for debugging
-           
             subject = sender = date = ''
             for header in headers:
                 if header['name'] == 'Subject':
@@ -124,8 +122,9 @@ class GmailClient:
 
             parts = payload.get('parts', [])
             body = ""
+            attachments = []
             if parts:
-                body = self._parse_parts(parts)
+                body, attachments = self._parse_parts_with_attachments(parts, msg_id)
             else:
                 data = payload['body'].get('data', '')
                 body = base64.urlsafe_b64decode(data).decode('utf-8')
@@ -142,12 +141,38 @@ class GmailClient:
                 'sender': sender,
                 'date': date,
                 'body': clean_body.strip(),
-                'message_id': message_id
-                
+                'message_id': message_id,
+                'attachments': attachments  # Include attachments in the email data
             }
         except Exception as e:
             logging.error("Error fetching email with ID %s: %s", msg_id, e)
             return {}
+
+    def _parse_parts_with_attachments(self, parts, msg_id):
+        logging.debug("Parsing email parts with attachments...")
+        body = ""
+        attachments = []
+        for part in parts:
+            if part.get('mimeType') == 'text/plain' and part['body'].get('data'):
+                body += base64.urlsafe_b64decode(part['body']['data']).decode('utf-8')
+            elif part.get('filename'):
+                attachment_id = part['body'].get('attachmentId')
+                if attachment_id:
+                    attachment = self.service.users().messages().attachments().get(
+                        userId='me', messageId=msg_id, id=attachment_id
+                    ).execute()
+                    data = base64.urlsafe_b64decode(attachment['data'])
+                    attachments.append({
+                        'filename': part['filename'],
+                        'mimeType': part['mimeType'],
+                        'size': part['body'].get('size'),
+                        'download_url': f"/api/download_attachment/{msg_id}/{attachment_id}"
+                    })
+            elif part.get('parts'):
+                sub_body, sub_attachments = self._parse_parts_with_attachments(part.get('parts'), msg_id)
+                body += sub_body
+                attachments.extend(sub_attachments)
+        return body, attachments
 
     def _parse_parts(self, parts):
         logging.debug("Parsing email parts...")
@@ -233,6 +258,22 @@ class GmailClient:
             return message_sent['id']
         except Exception as e:
             logging.error("Error sending reply: %s", e)
+            return None
+
+    def get_attachment(self, email_id, attachment_id):
+        logging.debug("Fetching attachment with ID: %s for email: %s", attachment_id, email_id)
+        try:
+            attachment = self.service.users().messages().attachments().get(
+                userId='me', messageId=email_id, id=attachment_id
+            ).execute()
+            data = base64.urlsafe_b64decode(attachment['data'])
+            return {
+                'data': data,
+                'mimeType': attachment.get('mimeType', 'application/octet-stream'),
+                'filename': attachment.get('filename', 'attachment')
+            }
+        except Exception as e:
+            logging.error("Error fetching attachment %s for email %s: %s", attachment_id, email_id, e)
             return None
 
 if __name__ == "__main__":

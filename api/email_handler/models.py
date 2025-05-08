@@ -111,6 +111,16 @@ class EmailQuery(models.Model):
     def __str__(self):
         return f"{self.subject} - {self.customer.email}"
 
+class EmailAttachment(models.Model):
+    email_query = models.ForeignKey(EmailQuery, on_delete=models.CASCADE, related_name='attachments')
+    filename = models.CharField(max_length=255)
+    mime_type = models.CharField(max_length=100)
+    size = models.IntegerField()
+    download_url = models.TextField()
+
+    def __str__(self):
+        return f"Attachment: {self.filename} ({self.mime_type})"
+
 class EmailReply(models.Model):
     email_query = models.ForeignKey(EmailQuery, on_delete=models.CASCADE, related_name='replies')
     responder = models.ForeignKey(Agent, on_delete=models.SET_NULL, null=True, blank=True)
@@ -183,7 +193,7 @@ class WhatsAppReply(models.Model):
 
     def __str__(self):
         return f"Reply to WhatsApp: {self.message.customer.name}"
-    
+
 
 
 
