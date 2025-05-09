@@ -427,3 +427,21 @@ def download_attachment(request, email_id, attachment_id):
     except Exception as e:
         logging.error(f"Error fetching attachment {attachment_id} for email {email_id}: {e}")
         return JsonResponse({'error': 'Failed to fetch attachment'}, status=500)
+
+
+# Outlook Views
+
+def fetch_unread_emails_outlook(request):
+    if request.method == 'POST':
+        try:
+            outlook_client = OutlookClient(
+                client_id="your_client_id",
+                client_secret="your_client_secret",
+                tenant_id="your_tenant_id"
+            )
+            emails = outlook_client.fetch_unread_emails()
+            return JsonResponse({'status': 'success', 'emails': emails})
+        except Exception as e:
+            logging.error(f"Error fetching unread emails from Outlook: {e}")
+            return JsonResponse({'error': 'Failed to fetch emails'}, status=500)
+    return JsonResponse({'error': 'Invalid request method'}, status=400)
