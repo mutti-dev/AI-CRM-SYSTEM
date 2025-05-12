@@ -6,6 +6,7 @@ from django.utils.timezone import now
 from .models import EmailQuery, EmailReply, EmailLog, Customer, EmailAttachment
 from faqs.models import FAQ
 from api.integrations.email_integration import GmailClient
+from api.integrations.email_integration import OutlookClient
 from ai_integration.chat_history import client, MODEL_NAME  # Updated import for AI responses
 from ai_integration.prompts import generate_email_reply_prompt
 import json
@@ -16,12 +17,15 @@ import time  # Add this import for retry delays
 import httpx
 
 gmail_client = GmailClient()
+outlook_client = OutlookClient()
 logger = logging.getLogger(__name__)
+
 
 @csrf_exempt
 def fetch_unread_emails(request):
     if request.method == 'POST':
         emails = gmail_client.fetch_unread_emails()
+        outlook_emails = outlook_client.fetch_unread_emails()
         emails_fetched = 0
         valid_emails = []
 
@@ -81,7 +85,8 @@ def fetch_unread_emails(request):
                     while retry_count < max_retries:
                         try:
                             # Fetch previous email content in the thread for context
-                            previous_emails = EmailQuery.objects.filter(gmail_thread_id=email['threadId']).values_list('content', flat=True)
+                            previous_emails = EmailQuery.objects.filter(gmail_thread_id=email['threadId']).values_list(
+                                'content', flat=True)
                             thread_context = "\n\n".join(previous_emails)
                             prompt = generate_email_reply_prompt(thread_context, email.get('body', ''), customer.name)
 
@@ -134,6 +139,7 @@ def fetch_unread_emails(request):
             'emails': valid_emails
         })
     return JsonResponse({'error': 'Invalid request method'}, status=400)
+
 
 @csrf_exempt
 def process_queries(request):
@@ -194,18 +200,20 @@ def process_queries(request):
         return JsonResponse({'status': 'success', 'processed_queries': processed_queries})
     return JsonResponse({'error': 'Invalid request method'}, status=400)
 
+
 @csrf_exempt
 def fetch_unread_emails_from_db(request):
     if request.method == 'GET':
         unread_emails = EmailQuery.objects.filter(is_replied=False).values(
-            'id', 
-            'subject', 
-            'customer__email', 
+            'id',
+            'subject',
+            'customer__email',
             'customer__name',
             'received_at'
         )
         return JsonResponse({'status': 'success', 'emails': list(unread_emails)})
     return JsonResponse({'error': 'Invalid request method'}, status=400)
+
 
 @csrf_exempt
 def reply_to_email(request):
@@ -215,7 +223,7 @@ def reply_to_email(request):
             email_query = get_object_or_404(EmailQuery, id=data['email_query_id'])
             reply_content = data['content'].strip()
             message_id = data.get('message_id')
-            
+
             if not reply_content:
                 return JsonResponse({'error': 'Reply content cannot be empty'}, status=400)
 
@@ -308,7 +316,7 @@ def reply_to_email(request):
                         thread_id=email_query.gmail_thread_id,
                         message_id=message_id
                     )
-                    
+
                     if gmail_message_id:
                         break
                     retry_count += 1
@@ -327,17 +335,17 @@ def reply_to_email(request):
                 sent_at=now(),
                 gmail_message_id=gmail_message_id
             )
-            
+
             email_query.is_replied = True
             email_query.save()
-            
+
             # Create success log
             EmailLog.objects.create(
                 email_query=email_query,
                 action='Replied',
                 message=f"Reply sent successfully. Message ID: {gmail_message_id}"
             )
-            
+
             return JsonResponse({
                 'status': 'success',
                 'reply': {
@@ -347,7 +355,7 @@ def reply_to_email(request):
                     'gmail_message_id': gmail_message_id
                 }
             })
-            
+
         except Exception as e:
             logging.error(f"Error sending reply: {str(e)}")
             # Create error log
@@ -361,8 +369,9 @@ def reply_to_email(request):
                 'message': 'Failed to send reply. Please try again.',
                 'error': str(e)
             }, status=500)
-    
+
     return JsonResponse({'error': 'Invalid request method'}, status=400)
+
 
 @csrf_exempt
 def fetch_email_details(request, id):
@@ -371,7 +380,7 @@ def fetch_email_details(request, id):
             email = EmailQuery.objects.get(id=id)
             # Fetch the complete thread from Gmail
             thread_messages = gmail_client.get_thread(email.gmail_thread_id)
-            
+
             email_details = {
                 'id': email.id,
                 'subject': email.subject,
@@ -395,6 +404,7 @@ def fetch_email_details(request, id):
             return JsonResponse({'error': 'Email not found'}, status=404)
     return JsonResponse({'error': 'Invalid request method'}, status=400)
 
+
 @csrf_exempt
 def fetch_email_replies(request, id):
     if request.method == 'GET':
@@ -405,6 +415,7 @@ def fetch_email_replies(request, id):
         except EmailQuery.DoesNotExist:
             return JsonResponse({'error': 'Email not found'}, status=404)
     return JsonResponse({'error': 'Invalid request method'}, status=400)
+
 
 @require_GET
 def download_attachment(request, email_id, attachment_id):
