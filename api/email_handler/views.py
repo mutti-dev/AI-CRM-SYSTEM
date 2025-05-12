@@ -5,7 +5,7 @@ from django.shortcuts import get_object_or_404
 from django.utils.timezone import now
 from .models import EmailQuery, EmailReply, EmailLog, Customer, EmailAttachment
 from faqs.models import FAQ
-from .email_integration.gmail_client import GmailClient
+from api.integrations.email_integration import GmailClient
 from ai_integration.chat_history import client, MODEL_NAME  # Updated import for AI responses
 from ai_integration.prompts import generate_email_reply_prompt
 import json
