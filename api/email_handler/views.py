@@ -7,7 +7,7 @@ from .models import EmailQuery, EmailReply, EmailLog, Customer, EmailAttachment
 from faqs.models import FAQ
 from integrations.email_integration.gmail_client import GmailClient
 from integrations.email_integration.outlook_client import OutlookClient
-from ai_integration.chat_history import client, MODEL_NAME  # Updated import for AI responses
+from ai_integration.chat_history import client  # Updated import for AI responses
 from ai_integration.prompts import generate_email_reply_prompt
 import json
 import logging
@@ -15,6 +15,7 @@ import re
 import base64
 import time
 import httpx
+from django.conf import settings
 
 
 from .services.email_service import (
@@ -44,10 +45,10 @@ def fetch_unread_emails(request):
     valid_emails += valid_emails_gmail
 
     # Process Outlook
-    outlook_emails = outlook_client.fetch_unread_emails()
-    emails_fetched_outlook, valid_emails_outlook = process_outlook_emails(outlook_emails)
-    emails_fetched += emails_fetched_outlook
-    valid_emails += valid_emails_outlook
+    # outlook_emails = outlook_client.fetch_unread_emails()
+    # emails_fetched_outlook, valid_emails_outlook = process_outlook_emails(outlook_emails)
+    # emails_fetched += emails_fetched_outlook
+    # valid_emails += valid_emails_outlook
 
     # print("Valid Emails=====================================", outlook_emails)
 
@@ -103,7 +104,7 @@ def process_queries(request):
                 if not matched:
                     prompt = generate_email_reply_prompt(query.content, "")
                     response = client.models.generate_content(
-                        model=MODEL_NAME,
+                        model=settings.AI_MODEL_NAME,
                         contents=prompt
                     )
                     reply_content = response.text.strip()

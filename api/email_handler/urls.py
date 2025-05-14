@@ -1,5 +1,7 @@
 from django.urls import path
 from . import views as email_views
+from django.conf import settings
+from django.conf.urls.static import static
 
 urlpatterns = [
     path('fetch-emails/', email_views.fetch_unread_emails, name='fetch_emails'),
@@ -9,4 +11,4 @@ urlpatterns = [
     path('email-details/<int:id>/', email_views.fetch_email_details, name='fetch_email_details'),
     path('email-replies/<int:id>/', email_views.fetch_email_replies, name='fetch_email_replies'),
     path('download-attachment/<str:email_id>/<str:attachment_id>/', email_views.download_attachment, name='download_attachment'),
-]
+] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

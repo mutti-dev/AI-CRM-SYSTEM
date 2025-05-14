@@ -8,7 +8,7 @@ import json
 from datetime import datetime
 import pytz
 from django.utils.timezone import make_aware
-from ai_integration.chat_history import client, MODEL_NAME  # Updated import for AI responses
+from ai_integration.chat_history import client  # Updated import for AI responses
 from ai_integration.prompts import generate_whatsapp_reply_prompt
 from colorama import Fore, Style  # Import colorama for colored logs
 from uuid import uuid4
@@ -147,7 +147,7 @@ def fetch_whatsapp_messages(request):
                         {"role": "user", "content": prompt},
                     ]
                     gen_response = client.chat.completions.create(
-                        model=MODEL_NAME, messages=messages
+                        model=settings.AI_MODEL_NAME, messages=messages
                     )
                     # Correctly access the content of the response
                     reply_content = gen_response.choices[0].message.content.strip()

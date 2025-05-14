@@ -2,14 +2,17 @@ import logging
 import re
 from django.utils.timezone import now
 from ..models import EmailQuery, EmailReply, Customer, EmailAttachment,EmailLog
-from ai_integration.chat_history import client, MODEL_NAME
+from ai_integration.chat_history import client
 from ai_integration.prompts import generate_email_reply_prompt
+from ai_integration.ai_utils import chat_with_ai
 from integrations.email_integration.gmail_client import GmailClient
 from integrations.email_integration.outlook_client import OutlookClient
+from django.conf import settings
 
 gmail_client = GmailClient()
 outlook_client = OutlookClient()
 logger = logging.getLogger(__name__)
+
 
 
 def extract_email_from_markdown(markdown_email):
@@ -92,10 +95,15 @@ def process_gmail_emails(emails):
 
 
 
+
+
+
 def process_outlook_emails(emails):
     valid_emails = []
     count = 0
 
+    attachments_dir = os.path.join(settings.MEDIA_ROOT, "email_attachments")
+    os.makedirs(attachments_dir, exist_ok=True)
 
     for email in emails:
         if not isinstance(email, dict):
@@ -128,10 +136,33 @@ def process_outlook_emails(emails):
             email_source=email['source']
         )
 
+        for attachment in email.get('attachments', []):
+            if attachment.get('isInline'):
+                continue
 
+            filename = attachment.get('name')
+            content_type = attachment.get('contentType')
+            size = attachment.get('size')
+            content_bytes = attachment.get('contentBytes')
+
+            if not (filename and content_bytes):
+                continue
+
+            # Save to filesystem
+            local_path = os.path.join(attachments_dir, filename)
+            with open(local_path, "wb") as f:
+                f.write(base64.b64decode(content_bytes))
+
+            # Save to DB
+            EmailAttachment.objects.create(
+                email_query=email_query,
+                filename=filename,
+                mime_type=content_type,
+                size=size,
+                download_url=f"/media/email_attachments/{filename}"  # Adjust based on how your MEDIA_URL is configured
+            )
 
         count += 1
-
         valid_emails.append(email)
 
         try:
@@ -145,6 +176,7 @@ def process_outlook_emails(emails):
 
 
 
+
 def send_ai_reply(email, customer, email_query, thread_id, source):
     try:
         previous_emails = EmailQuery.objects.filter(
@@ -153,13 +185,20 @@ def send_ai_reply(email, customer, email_query, thread_id, source):
 
         thread_context = "\n\n".join(previous_emails)
         prompt = generate_email_reply_prompt(thread_context, email.get('body', ''), customer.name)
+        if client and settings.AI_RESPONSE:
+            messages = [
+                {"role": "system", "content": "You are an AI assistant helping with email replies."},
+                {"role": "user", "content": prompt}
+            ]
+            response = chat_with_ai(client, settings.AI_MODEL_NAME, messages, source=source)
 
-        messages = [
-            {"role": "system", "content": "You are an AI assistant helping with email replies."},
-            {"role": "user", "content": prompt}
-        ]
-        response = client.chat.completions.create(model=MODEL_NAME, messages=messages)
-        reply_content = response.choices[0].message.content.strip()
+            if response:
+                reply_content = response.choices[0].message.content.strip()
+
+        # response = client.chat.completions.create(model=settings.AI_MODEL_NAME, messages=messages)
+        # reply_content = response.choices[0].message.content.strip()
+
+
 
         # Send reply and record message_id based on source
         if source == 'gmail':
@@ -196,22 +235,39 @@ def send_ai_reply(email, customer, email_query, thread_id, source):
 
 
 
-        # ✅ Mark as replied
+        #  Mark as replied
         email_query.is_replied = True
         email_query.save()
 
-        # ✅ Log success
+        #  Log success
         EmailLog.objects.create(
             email_query=email_query,
             action='Replied',
             message='AI reply sent successfully.'
         )
 
+
     except Exception as e:
+
         # ❌ Log failure
+
+        message = (
+
+            "AI response is disabled in settings."
+
+            if not getattr(settings, "AI_RESPONSE", False)
+
+            else f"Error in send_ai_reply: {str(e)}"
+
+        )
+
         EmailLog.objects.create(
+
             email_query=email_query if 'email_query' in locals() else None,
+
             action='Failed',
-            message=f"Error in send_ai_reply: {str(e)}"
+
+            message=message
+
         )
         raise  # Optional: you can log and continue instead of raising

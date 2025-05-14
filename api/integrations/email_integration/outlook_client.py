@@ -117,22 +117,18 @@ class OutlookClient:
 
     # ================= OUTLOOK MAIL =================
 
-    def fetch_unread_emails(self):
+    def fetch_unread_emails(self, include_attachments=True):
         endpoint = f'{self.base_url}/me/messages'
         headers = self.get_headers()
         params = {
-            '$filter': "isRead eq false",  # fetch UNREAD emails, not read
-
-            '$orderby': 'receivedDateTime desc',
+            '$filter': "isRead eq false",
+            '$orderby': 'receivedDateTime desc'
         }
         response = httpx.get(endpoint, headers=headers, params=params)
         response.raise_for_status()
 
         emails = []
-        # print("Valid Emails=====================================", response.json().get('value', []))
         for msg in response.json().get('value', []):
-            # print("Msg===================", msg)
-
             email = {
                 "id": msg.get("id"),
                 "subject": msg.get("subject"),
@@ -143,11 +139,26 @@ class OutlookClient:
                 "importance": msg.get("importance"),
                 "isRead": msg.get("isRead"),
                 "parentFolderId": msg.get("parentFolderId"),
+                "attachments": []
             }
+
+            # ✅ Include attachments if flag is True
+            if include_attachments:
+                attachments_endpoint = f"{self.base_url}/me/messages/{email['id']}/attachments"
+                attach_response = httpx.get(attachments_endpoint, headers=headers)
+                attach_response.raise_for_status()
+
+                for attach in attach_response.json().get('value', []):
+                    if attach.get("@odata.type") == "#microsoft.graph.fileAttachment":
+                        email['attachments'].append({
+                            "name": attach.get("name"),
+                            "contentType": attach.get("contentType"),
+                            "size": attach.get("size"),
+                            "contentBytes": attach.get("contentBytes")  # base64 encoded content
+                        })
+            print("EMAILS===========", emails)
+
             emails.append(email)
-
-
-        # print("Email================", emails)
 
         return emails
 

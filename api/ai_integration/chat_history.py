@@ -2,12 +2,13 @@ import os
 import azure.identity
 import openai
 from dotenv import load_dotenv
+from django.conf import settings
 
 # Setup the OpenAI client to use either Azure, OpenAI.com, or Ollama API
 load_dotenv(override=True)
-API_HOST = os.getenv("API_HOST", "github")
+API_HOST = settings.API_HOST
 
-if API_HOST == "azure":
+if API_HOST == "azure" and settings.AI_RESPONSE:
     token_provider = azure.identity.get_bearer_token_provider(
         azure.identity.DefaultAzureCredential(), "https://cognitiveservices.azure.com/.default"
     )
@@ -16,16 +17,22 @@ if API_HOST == "azure":
         azure_endpoint=os.environ["AZURE_OPENAI_ENDPOINT"],
         azure_ad_token_provider=token_provider,
     )
-    MODEL_NAME = os.environ["AZURE_OPENAI_DEPLOYMENT"]
-elif API_HOST == "ollama":
+    MODEL_NAME = settings.AI_MODEL_NAME
+elif API_HOST == "ollama" and settings.AI_RESPONSE:
     client = openai.OpenAI(base_url=os.environ["OLLAMA_ENDPOINT"], api_key="nokeyneeded")
-    MODEL_NAME = os.environ["OLLAMA_MODEL"]
-elif API_HOST == "github":
+    MODEL_NAME = settings.AI_MODEL_NAME
+elif API_HOST == "github" and settings.AI_RESPONSE:
     client = openai.OpenAI(base_url="https://models.inference.ai.azure.com", api_key=os.environ["GITHUB_TOKEN"])
-    MODEL_NAME = os.getenv("GITHUB_MODEL", "gpt-4o")
+    MODEL_NAME = settings.AI_MODEL_NAME
 else:
-    client = openai.OpenAI(api_key=os.environ["OPENAI_KEY"])
-    MODEL_NAME = os.environ["OPENAI_MODEL"]
+    # client = openai.OpenAI(api_key=os.environ["OPENAI_KEY"])
+    # MODEL_NAME = os.environ["OPENAI_MODEL"]
+
+    client = None
+    print("AI_RESPONSE is set to False or API_HOST is not recognized. No AI client will be created.")
+
+
+
 
 # Removed the console-based question-answer loop
 # This file is now focused on providing the `client` and `MODEL_NAME` for programmatic use.

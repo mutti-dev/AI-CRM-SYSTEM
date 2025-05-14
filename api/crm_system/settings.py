@@ -206,6 +206,17 @@ WAAPI_SSL_VERIFY = os.getenv('WAAPI_SSL_VERIFY', 'True').lower() == 'true'
 WAAPI_TEST_MODE = os.getenv('WAAPI_TEST_MODE', 'True').lower() == 'true'  # Add this line
 
 
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+
+AI_RESPONSE = True
+API_HOST='github'
+AI_MODEL_NAME = 'gpt-4o'
+AI_MAX_TOKENS = 1000
+
+
+
 # Validate required settings
 if not WAAPI_API_KEY:
     raise ValueError("WAAPI_API_KEY environment variable is not set")
