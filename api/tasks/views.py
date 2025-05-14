@@ -142,6 +142,10 @@ def assign_task(request):
             return JsonResponse({'error': 'An error occurred while assigning the task'}, status=500)
     return JsonResponse({'error': 'Invalid request method'}, status=400)
 
+
+
+
+
 @csrf_exempt
 def fetch_task_details(request, email_query_id):
 

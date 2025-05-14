@@ -5,140 +5,78 @@ from django.shortcuts import get_object_or_404
 from django.utils.timezone import now
 from .models import EmailQuery, EmailReply, EmailLog, Customer, EmailAttachment
 from faqs.models import FAQ
-from api.integrations.email_integration import GmailClient
-from api.integrations.email_integration import OutlookClient
+from integrations.email_integration.gmail_client import GmailClient
+from integrations.email_integration.outlook_client import OutlookClient
 from ai_integration.chat_history import client, MODEL_NAME  # Updated import for AI responses
 from ai_integration.prompts import generate_email_reply_prompt
 import json
 import logging
 import re
 import base64
-import time  # Add this import for retry delays
+import time
 import httpx
+
+
+from .services.email_service import (
+    process_gmail_emails,
+    process_outlook_emails,
+    send_ai_reply,
+)
 
 gmail_client = GmailClient()
 outlook_client = OutlookClient()
-logger = logging.getLogger(__name__)
 
+
+logger = logging.getLogger(__name__)
 
 @csrf_exempt
 def fetch_unread_emails(request):
-    if request.method == 'POST':
-        emails = gmail_client.fetch_unread_emails()
-        outlook_emails = outlook_client.fetch_unread_emails()
-        emails_fetched = 0
-        valid_emails = []
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Invalid request method'}, status=400)
 
-        for email in emails:
-            # logging.debug("Processing email: %s", email)
+    emails_fetched = 0
+    valid_emails = []
 
-            if 'threadId' not in email:
-                logging.error("Missing 'threadId' in email: %s", email)
-                continue
+    # Process Gmail
+    gmail_emails = gmail_client.fetch_unread_emails()
+    emails_fetched_gmail, valid_emails_gmail = process_gmail_emails(gmail_emails)
+    emails_fetched += emails_fetched_gmail
+    valid_emails += valid_emails_gmail
 
-            # Extract the email address from the sender field
-            sender_email = email.get('sender')
-            match = re.search(r'<(.*?)>', sender_email)
-            if match:
-                sender_email = match.group(1)
-            else:
-                sender_email = sender_email.strip()
+    # Process Outlook
+    outlook_emails = outlook_client.fetch_unread_emails()
+    emails_fetched_outlook, valid_emails_outlook = process_outlook_emails(outlook_emails)
+    emails_fetched += emails_fetched_outlook
+    valid_emails += valid_emails_outlook
 
-            # logging.debug("Extracted sender email: %s", sender_email)
+    # print("Valid Emails=====================================", outlook_emails)
 
-            # Check if the sender exists in the Customer table
-            customer = Customer.objects.filter(email=sender_email).first()
-            if customer:
-                # Check if the email thread already exists
-                existing_query = EmailQuery.objects.filter(gmail_thread_id=email['threadId']).first()
-                if existing_query:
-                    logging.info("Email thread already exists: %s", email['threadId'])
-                    continue  # Skip creating a new EmailQuery
+    return JsonResponse({
+        'status': 'success',
+        'emails_fetched': emails_fetched,
+        'total_unread_emails_fetched': len(valid_emails),
+        'emails': valid_emails
+    })
 
-                # Create a new EmailQuery
-                email_query = EmailQuery.objects.create(
-                    customer=customer,
-                    subject=email.get('subject', 'No Subject'),
-                    content=email.get('body', ''),
-                    received_at=now(),
-                    gmail_thread_id=email['threadId']
-                )
 
-                # Save attachments in the database
-                for attachment in email.get('attachments', []):
-                    EmailAttachment.objects.create(
-                        email_query=email_query,
-                        filename=attachment['filename'],
-                        mime_type=attachment['mimeType'],
-                        size=attachment['size'],
-                        download_url=attachment['download_url']
-                    )
 
-                emails_fetched += 1
-                valid_emails.append(email)
 
-                # Automatically send a reply using GenAI
-                try:
-                    # Retry logic for network errors
-                    max_retries = 3
-                    retry_count = 0
-                    while retry_count < max_retries:
-                        try:
-                            # Fetch previous email content in the thread for context
-                            previous_emails = EmailQuery.objects.filter(gmail_thread_id=email['threadId']).values_list(
-                                'content', flat=True)
-                            thread_context = "\n\n".join(previous_emails)
-                            prompt = generate_email_reply_prompt(thread_context, email.get('body', ''), customer.name)
 
-                            # Use the correct 'messages' format for the OpenAI client
-                            messages = [
-                                {"role": "system", "content": "You are an AI assistant helping with email replies."},
-                                {"role": "user", "content": prompt}
-                            ]
-                            response = client.chat.completions.create(
-                                model=MODEL_NAME,
-                                messages=messages
-                            )
-                            # Correctly access the content of the response
-                            reply_content = response.choices[0].message.content.strip()
 
-                            logging.debug("Generated reply content: %s", reply_content)
 
-                            gmail_message_id = gmail_client.send_reply(
-                                to_email=sender_email,
-                                subject=f"Re: {email.get('subject', 'No Subject')}",
-                                body=reply_content,
-                                thread_id=email['threadId']
-                            )
-                            logging.info("Auto-reply sent for email: %s", email['threadId'])
 
-                            # Save the reply in EmailReply
-                            EmailReply.objects.create(
-                                email_query=EmailQuery.objects.get(gmail_thread_id=email['threadId']),
-                                content=reply_content,
-                                sent_at=now(),
-                                gmail_message_id=gmail_message_id
-                            )
-                            break  # Exit retry loop on success
-                        except httpx.ConnectError as e:
-                            retry_count += 1
-                            logging.error(f"Connection error, retrying {retry_count}/{max_retries}: {e}")
-                            time.sleep(2)  # Wait before retrying
-                            if retry_count == max_retries:
-                                raise
-                except Exception as e:
-                    logging.error("Failed to send auto-reply for email %s: %s", email['threadId'], e)
-            else:
-                # logging.debug("Sender not found in Customer table: %s", sender_email)
-                print("Not found email")
 
-        return JsonResponse({
-            'status': 'success',
-            'emails_fetched': emails_fetched,
-            'total_unread_emails_fetched': len(valid_emails),
-            'emails': valid_emails
-        })
-    return JsonResponse({'error': 'Invalid request method'}, status=400)
+
+
+
+
+
+
+
+
+
+
+
 
 
 @csrf_exempt
@@ -183,7 +121,8 @@ def process_queries(request):
                     email_query=query,
                     content=reply_content,
                     sent_at=now(),
-                    gmail_message_id=gmail_message_id
+                    gmail_message_id=gmail_message_id,
+                    source= "gmail"
                 )
 
                 query.is_replied = True
@@ -201,6 +140,10 @@ def process_queries(request):
     return JsonResponse({'error': 'Invalid request method'}, status=400)
 
 
+
+
+
+
 @csrf_exempt
 def fetch_unread_emails_from_db(request):
     if request.method == 'GET':
@@ -209,168 +152,155 @@ def fetch_unread_emails_from_db(request):
             'subject',
             'customer__email',
             'customer__name',
-            'received_at'
+            'received_at',
+            'source'
         )
         return JsonResponse({'status': 'success', 'emails': list(unread_emails)})
     return JsonResponse({'error': 'Invalid request method'}, status=400)
 
 
+
+
+
 @csrf_exempt
 def reply_to_email(request):
-    if request.method == 'POST':
-        try:
-            data = json.loads(request.body)
-            email_query = get_object_or_404(EmailQuery, id=data['email_query_id'])
-            reply_content = data['content'].strip()
-            message_id = data.get('message_id')
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Invalid request method'}, status=400)
 
-            if not reply_content:
-                return JsonResponse({'error': 'Reply content cannot be empty'}, status=400)
+    try:
+        data = json.loads(request.body)
+        email_query = get_object_or_404(EmailQuery, id=data['email_query_id'])
+        reply_content = data['content'].strip()
+        message_id = data.get('message_id')
+        email_source = email_query.source
 
-            # Apply the styled HTML template
-            formatted_content = f"""
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <meta name='viewport' content='width=device-width, initial-scale=1'>
-                <style>
-                    body {{ 
-                        font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; 
-                        line-height: 1.6; 
-                        color: #2d3748; 
-                        margin: 0;
-                        background-color: #f7fafc;
-                    }}
-                    .header {{ 
-                        background-color: #ffffff;
-                        padding: 2rem 1rem;
-                        text-align: center;
-                        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-                    }}
-                    .logo {{
-                        height: 40px;
-                        width: auto;
-                        max-width: 240px;
-                    }}
-                    .content {{ 
-                        max-width: 800px;
-                        margin: 2rem auto;
-                        padding: 2rem;
-                        background: white;
-                        border-radius: 8px;
-                        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-                    }}
-                    .footer {{ 
-                        text-align: center;
-                        padding: 2rem 1rem;
-                        color: #718096;
-                        font-size: 0.875rem;
-                        border-top: 1px solid #e2e8f0;
-                        margin-top: 2rem;
-                    }}
-                    a {{
-                        color: #2171b5;
-                        text-decoration: none;
-                        font-weight: 500;
-                    }}
-                    a:hover {{
-                        text-decoration: underline;
-                    }}
-                    @media (max-width: 640px) {{
-                        .content {{
-                            margin: 1rem;
-                            padding: 1.5rem;
-                        }}
-                        .header {{
-                            padding: 1.5rem 1rem;
-                        }}
-                    }}
-                </style>
-            </head>
-            <body>
-                <div class='header'>
-                    <img src='https://maxremind.com/wp-content/uploads/2024/07/Maxremind-HD-Logo-min-1536x271.png' 
-                         alt='MaxRemind Logo' 
-                         class='logo'>
-                </div>
-                <div class='content'>
-                    {reply_content}
-                </div>
-                <div class='footer'>
-                    © 2024 MaxRemind. All rights reserved.<br>
-                    <span style='font-size: 0.75rem; color: #a0aec0;'>Need help? Contact our support team</span>
-                </div>
-            </body>
-            </html>
-            """
+        if not reply_content:
+            return JsonResponse({'error': 'Reply content cannot be empty'}, status=400)
 
-            # Retry mechanism for Gmail API
-            max_retries = 3
-            retry_count = 0
-            while retry_count < max_retries:
-                try:
-                    gmail_message_id = gmail_client.reply_to_thread(
+        # HTML-styled content
+        formatted_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta name='viewport' content='width=device-width, initial-scale=1'>
+            <style>
+                body {{ font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.6; color: #2d3748; background: #f7fafc; margin: 0; }}
+                .header {{ background: #fff; padding: 2rem 1rem; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }}
+                .logo {{ height: 40px; max-width: 240px; }}
+                .content {{ max-width: 800px; margin: 2rem auto; padding: 2rem; background: #fff; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }}
+                .footer {{ text-align: center; padding: 2rem 1rem; color: #718096; font-size: 0.875rem; border-top: 1px solid #e2e8f0; margin-top: 2rem; }}
+            </style>
+        </head>
+        <body>
+            <div class='header'>
+                <img src='https://maxremind.com/wp-content/uploads/2024/07/Maxremind-HD-Logo-min-1536x271.png' alt='MaxRemind Logo' class='logo'>
+            </div>
+            <div class='content'>
+                {reply_content}
+            </div>
+            <div class='footer'>
+                © 2024 MaxRemind. All rights reserved.<br>
+                <span style='font-size: 0.75rem; color: #a0aec0;'>Need help? Contact our support team</span>
+            </div>
+        </body>
+        </html>
+        """
+
+        # Send reply with retry mechanism
+        max_retries = 3
+        retry_count = 0
+        reply = None
+
+        while retry_count < max_retries:
+            try:
+                if email_source == 'gmail':
+                    gmail_msg_id = gmail_client.reply_to_thread(
                         to_email=email_query.customer.email,
                         subject=f"Re: {email_query.subject}",
                         body=formatted_content,
                         thread_id=email_query.gmail_thread_id,
                         message_id=message_id
                     )
+                    if not gmail_msg_id:
+                        raise Exception("Gmail message ID not returned.")
 
-                    if gmail_message_id:
-                        break
-                    retry_count += 1
-                except Exception as e:
-                    logging.error(f"Retry {retry_count + 1} failed: {str(e)}")
-                    retry_count += 1
-                    if retry_count == max_retries:
-                        raise
+                    reply = EmailReply.objects.create(
+                        email_query=email_query,
+                        content=formatted_content,
+                        sent_at=now(),
+                        gmail_message_id=gmail_msg_id,
+                        source='gmail',
+                    )
+                    break
 
-            if not gmail_message_id:
-                raise Exception("Failed to send email after multiple retries")
+                elif email_source == 'outlook':
+                    outlook_msg_id = outlook_client.send_email(
+                        subject=f"Re: {email_query.subject}",
+                        to_emails=email_query.customer.email,
+                        body=formatted_content,
+                        message_id=email_query.outlook_message_id
+                    )
+                    if not outlook_msg_id:
+                        raise Exception("Outlook message ID not returned.")
 
-            reply = EmailReply.objects.create(
-                email_query=email_query,
-                content=formatted_content,
-                sent_at=now(),
-                gmail_message_id=gmail_message_id
-            )
+                    outlook_client.mark_email_as_read(email_query.outlook_message_id)
 
-            email_query.is_replied = True
-            email_query.save()
+                    reply = EmailReply.objects.create(
+                        email_query=email_query,
+                        content=formatted_content,
+                        sent_at=now(),
+                        outlook_message_id=outlook_msg_id,
+                        source='outlook',
+                    )
+                    break
 
-            # Create success log
-            EmailLog.objects.create(
-                email_query=email_query,
-                action='Replied',
-                message=f"Reply sent successfully. Message ID: {gmail_message_id}"
-            )
+                else:
+                    raise Exception(f"Unsupported email source: {email_source}")
 
-            return JsonResponse({
-                'status': 'success',
-                'reply': {
-                    'id': reply.id,
-                    'content': reply.content,
-                    'sent_at': reply.sent_at.isoformat(),
-                    'gmail_message_id': gmail_message_id
-                }
-            })
+            except Exception as e:
+                logging.error(f"[{email_source}] Retry {retry_count + 1} failed: {str(e)}")
+                retry_count += 1
+                if retry_count == max_retries:
+                    raise
 
-        except Exception as e:
-            logging.error(f"Error sending reply: {str(e)}")
-            # Create error log
-            EmailLog.objects.create(
-                email_query=email_query if 'email_query' in locals() else None,
-                action='Failed',
-                message=f"Reply failed: {str(e)}"
-            )
-            return JsonResponse({
-                'status': 'error',
-                'message': 'Failed to send reply. Please try again.',
-                'error': str(e)
-            }, status=500)
+        # ✅ Mark as replied
+        email_query.is_replied = True
+        email_query.save()
 
-    return JsonResponse({'error': 'Invalid request method'}, status=400)
+        # ✅ Log success
+        EmailLog.objects.create(
+            email_query=email_query,
+            action='Replied',
+            message=f"Reply sent successfully via {email_source}."
+        )
+
+        return JsonResponse({
+            'status': 'success',
+            'reply': {
+                'id': reply.id,
+                'content': reply.content,
+                'sent_at': reply.sent_at.isoformat(),
+                'message_id': reply.gmail_message_id or reply.outlook_message_id
+            }
+        })
+
+    except Exception as e:
+        logging.error(f"Error sending reply: {str(e)}")
+        EmailLog.objects.create(
+            email_query=email_query if 'email_query' in locals() else None,
+            action='Failed',
+            message=f"Reply failed: {str(e)}"
+        )
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Failed to send reply. Please try again.',
+            'error': str(e)
+        }, status=500)
+
+
+
+
+
 
 
 @csrf_exempt
@@ -405,6 +335,11 @@ def fetch_email_details(request, id):
     return JsonResponse({'error': 'Invalid request method'}, status=400)
 
 
+
+
+
+
+
 @csrf_exempt
 def fetch_email_replies(request, id):
     if request.method == 'GET':
@@ -415,6 +350,10 @@ def fetch_email_replies(request, id):
         except EmailQuery.DoesNotExist:
             return JsonResponse({'error': 'Email not found'}, status=404)
     return JsonResponse({'error': 'Invalid request method'}, status=400)
+
+
+
+
 
 
 @require_GET
@@ -440,19 +379,3 @@ def download_attachment(request, email_id, attachment_id):
         return JsonResponse({'error': 'Failed to fetch attachment'}, status=500)
 
 
-# Outlook Views
-
-def fetch_unread_emails_outlook(request):
-    if request.method == 'POST':
-        try:
-            outlook_client = OutlookClient(
-                client_id="your_client_id",
-                client_secret="your_client_secret",
-                tenant_id="your_tenant_id"
-            )
-            emails = outlook_client.fetch_unread_emails()
-            return JsonResponse({'status': 'success', 'emails': emails})
-        except Exception as e:
-            logging.error(f"Error fetching unread emails from Outlook: {e}")
-            return JsonResponse({'error': 'Failed to fetch emails'}, status=500)
-    return JsonResponse({'error': 'Invalid request method'}, status=400)

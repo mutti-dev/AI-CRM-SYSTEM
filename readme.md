@@ -873,26 +873,24 @@ With its scalable architecture and comprehensive feature set, MaxRemind CRM can 
 
 
 
+___________________
+
+
+### Starting redis server
+
+
+**Celery Worker**
+
+Purpose: Starts the Celery worker, which executes the tasks (e.g., sending emails).
+
+`celery -A crm_system worker --pool=solo --loglevel=info`
 
 
 
+**Celery Beats**
+
+Purpose: Starts the Celery Beat scheduler, which schedules periodic tasks (like CRON jobs).
+
+`celery -A crm_system beat --loglevel=info`
 
 
-
-
-
-
-
-
-
-
-# Starting redis server
-# ✅ 2. celery -A crm_system worker --pool=solo --loglevel=info
-# Purpose: Starts the Celery worker, which executes the tasks (e.g., sending emails).
-
-# Required: ✅ Yes.
-
-# ✅ 3. celery -A crm_system beat --loglevel=info
-# Purpose: Starts the Celery Beat scheduler, which schedules periodic tasks (like CRON jobs).
-
-# Required: ✅ Yes — if you're using scheduled tasks.

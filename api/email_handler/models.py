@@ -7,15 +7,18 @@ class EmailQuery(models.Model):
     subject = models.CharField(max_length=255)
     content = models.TextField()
     received_at = models.DateTimeField()
-    gmail_thread_id = models.CharField(max_length=255, unique=True)
+    gmail_thread_id = models.CharField(max_length=255, blank=True, null=True)
+    gmail_message_id = models.CharField(max_length=255, blank=True, null=True)
+    outlook_message_id = models.CharField(max_length=255, blank=True, null=True)
     is_replied = models.BooleanField(default=False)
     assigned_team = models.ForeignKey(Team, on_delete=models.SET_NULL, null=True, blank=True)
     assigned_agent = models.ForeignKey(Agent, on_delete=models.SET_NULL, null=True, blank=True)
     is_complex = models.BooleanField(default=False, help_text="Indicates if manual intervention is needed.")
     created_at = models.DateTimeField(auto_now_add=True)
+    email_source = models.CharField(max_length=255, null=True)
 
     def __str__(self):
-        return f"{self.subject} - {self.customer.email}"
+        return f"{self.subject} - {self.customer.email} - {self.email_source}"
 
 class EmailAttachment(models.Model):
     email_query = models.ForeignKey(EmailQuery, on_delete=models.CASCADE, related_name='attachments')
@@ -32,7 +35,9 @@ class EmailReply(models.Model):
     responder = models.ForeignKey(Agent, on_delete=models.SET_NULL, null=True, blank=True)
     content = models.TextField()
     sent_at = models.DateTimeField(auto_now_add=True)
-    gmail_message_id = models.CharField(max_length=255, unique=True)
+    gmail_message_id = models.CharField(max_length=255, unique=True, null=True, blank=True)
+    outlook_message_id = models.CharField(max_length=255, unique=True, null=True, blank=True)
+    source = models.CharField(max_length=255,null=True)
 
     def __str__(self):
         return f"Reply to: {self.email_query.subject}"

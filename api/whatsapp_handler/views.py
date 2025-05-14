@@ -1,7 +1,7 @@
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST, require_GET
-from api.integrations.whatsapp_integration.whatsapp_client import WhatsAppClient
+from integrations.whatsapp_integration.whatsapp_client import WhatsAppClient
 from customers.models import Customer
 from .models import WhatsAppMessage, WhatsAppReply
 import json

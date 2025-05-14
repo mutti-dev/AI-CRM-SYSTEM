@@ -12,3 +12,4 @@ def dashboard_data(request):
         }
         return JsonResponse(data)
     return JsonResponse({'error': 'Invalid request method'}, status=400)
+
