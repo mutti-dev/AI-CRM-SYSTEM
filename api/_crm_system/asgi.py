@@ -1,5 +1,5 @@
 """
-ASGI config for crm_system project.
+ASGI config for _crm_system project.
 
 It exposes the ASGI callable as a module-level variable named ``application``.
 
@@ -11,6 +11,6 @@ import os
 
 from django.core.asgi import get_asgi_application
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'crm_system.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', '_crm_system.settings')
 
 application = get_asgi_application()

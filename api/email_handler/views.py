@@ -30,6 +30,10 @@ outlook_client = OutlookClient()
 
 logger = logging.getLogger(__name__)
 
+
+
+
+
 @csrf_exempt
 def fetch_unread_emails(request):
     if request.method != 'POST':

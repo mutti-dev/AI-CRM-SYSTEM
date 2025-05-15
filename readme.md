@@ -634,7 +634,7 @@ The backend of MaxRemind CRM is built using Django, a high-level Python web fram
 The Django project is named `crm_system` as identified in the manage.py file:
 
 ```python
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'crm_system.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', '_crm_system.settings')
 ```
 
 The standard Django project structure is followed, with apps organized by functionality.

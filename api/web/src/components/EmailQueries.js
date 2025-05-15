@@ -33,7 +33,7 @@ const Queries = () => {
 
   const fetchUnreadEmails = async () => {
     try {
-      const response = await fetch(`${config.API_URL}/api/unread-emails/`);
+      const response = await fetch(`${config.API_URL}/api/emails/unread-emails/`);
       if (!response.ok) {
         throw new Error("Failed to fetch unread emails");
       }

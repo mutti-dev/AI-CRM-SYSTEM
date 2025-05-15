@@ -1,0 +1,139 @@
+/* =============== Admin Theme Customization =============== */
+:root {
+    --primary-color: #3057A4;        /* Dark Blue */
+    --secondary-color: #54595F;      /* Light Grey */
+    --accent-color: #61CE70;         /* Soft Green */
+    --text-light: #ffffff;           /* White */
+    --text-dark: #1e1e1e;            /* Dark Text */
+    --button-hover: #004c8c;         /* Hover Effect on Buttons */
+    --box-shadow: rgba(0, 0, 0, 0.1);/* Subtle Box Shadow */
+    --header-bg: #3057A4;
+    --background-color: #ffffff;     /* Light background */
+    --card-bg: #f9f9f9;              /* Card background */
+}
+
+/* Dark mode variables */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --primary-color: #91baff;         /* Lighter blue for dark BG */
+        --secondary-color: #cccccc;       /* Soft light grey */
+        --accent-color: #61CE70;          /* Same accent */
+        --text-light: #ffffff;            /* Keep white text */
+        --text-dark: #e0e0e0;             /* Light grey text */
+        --button-hover: #61CE70;          /* Accent hover */
+        --box-shadow: rgba(255, 255, 255, 0.1);
+        --header-bg: #1f1f2e;
+        --background-color: #121212;      /* Dark background */
+        --card-bg: #1e1e1e;
+    }
+}
+
+
+
+/* =============== Header =============== */
+#header {
+    width: auto;
+    height: 4.0rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 40px;
+    background: var(--header-bg);
+    color: var(--text-light);
+}
+
+/* User tools */
+#user-tools {
+    float: right;
+    margin: 0 0 0 20px;
+    text-align: right;
+}
+
+#user-tools, #logout-form button a {
+    padding: 0;
+    font-weight: 300;
+    font-size: 0.6875rem;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--text-light);
+}
+
+/* =============== Branding Header =============== */
+.branding {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.5rem 2rem;
+    color: var(--text-light);
+    flex-wrap: wrap;
+    gap: 1rem;
+    background-color: var(--header-bg);
+}
+
+/* Company logo styling */
+#branding img#company-logo {
+    width: 120px;
+    height: 75px;
+    border-radius: 10%;
+    align-items: center;
+    transition: transform 0.3s ease, filter 0.3s ease;
+}
+
+/* Logo hover effect */
+#branding img#company-logo:hover {
+    transform: scale(1.05);
+    filter: brightness(1.1);
+}
+
+/* Site name heading */
+#branding h1#site-name {
+    margin: 0;
+    font-family: 'Roboto UI', 'Arial', sans-serif;
+    font-weight: 700;
+    font-size: 1.0rem;
+    text-align: center;
+    flex: 1;
+}
+
+/* Site name link styling */
+#branding h1#site-name a {
+    color: var(--text-light);
+    text-decoration: none;
+    transition: color 0.3s ease, text-shadow 0.3s ease;
+}
+
+/* Hover effect for the site name */
+#branding h1#site-name a:hover {
+    color: var(--accent-color);
+    text-shadow: 0 0 6px rgba(255, 107, 107, 0.7);
+}
+
+/* =============== Global Navigation =============== */
+#nav-global {
+    display: flex;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    padding: 1rem 2rem;
+    gap: 1rem;
+}
+
+#nav-global a {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: 600;
+    padding: 0.6rem 1.2rem;
+    border-radius: 25px;
+    transition: all 0.3s ease;
+    font-size: 1rem;
+    background-color: var(--text-light);
+    box-shadow: 0 3px 6px var(--box-shadow);
+}
+
+/* Hover effect for nav links */
+#nav-global a:hover {
+    background-color: var(--primary-color);
+    color: var(--text-light);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 10px var(--box-shadow);
+}
