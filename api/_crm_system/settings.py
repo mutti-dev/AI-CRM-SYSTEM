@@ -32,7 +32,7 @@ SECRET_KEY = 'django-insecure-^#opt8hk2+7k$idupqc=9q_!)&cjn!a5ilwxn72ab0)u)pjxy*
 DEBUG = True
 
 # ALLOWED_HOSTS = ['192.168.137.1']
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = ['localhost', '192.168.18.74', '127.0.0.1', '*']
 
 
 
@@ -61,6 +61,7 @@ INSTALLED_APPS = [
     'integrations',
     'tasks_handler',
     'frontend',
+    'drf_yasg'
 ]
 
 MIDDLEWARE = [
@@ -173,7 +174,9 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:3000',  # Existing frontend URL
     'http://localhost:3001',  # Add this frontend URL
-    'http://192.168.137.90:3001',  # Add this frontend URL
+    'http://192.168.137.90:3001',
+    "http://localhost:3000",
+    "http://192.168.18.74:3000"
 ]
 
 # Optionally, allow all origins (not recommended for production)

@@ -33,11 +33,14 @@ const Queries = () => {
 
   const fetchUnreadEmails = async () => {
     try {
-      const response = await fetch(`${config.API_URL}/api/emails/unread-emails/`);
+      const response = await fetch("/api/emails/unread-emails/");
+      console.log("Response", response);
+
       if (!response.ok) {
         throw new Error("Failed to fetch unread emails");
       }
       const result = await response.json();
+      console.log("Result", result);
       setEmails(result.emails || []);
       setFilteredEmails(result.emails || []);
     } catch (error) {

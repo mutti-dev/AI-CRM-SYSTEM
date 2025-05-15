@@ -20,6 +20,21 @@ from django.urls import path, include, re_path
 from frontend.views import FrontendAppView
 from django.conf.urls.static import static
 from django.conf import settings
+from rest_framework import permissions
+from drf_yasg.views import get_schema_view
+from drf_yasg import openapi
+
+
+schema_view = get_schema_view(
+    openapi.Info(
+        title="CRM API",
+        default_version='v1',
+        description="API documentation",
+    ),
+    public=True,
+    permission_classes=(permissions.AllowAny,),
+)
+
 
 # Customize admin site headers
 admin.site.site_header = "MaxRemind CRM Admin"
@@ -28,6 +43,7 @@ admin.site.index_title = "Welcome to MaxRemind CRM Admin Panel"
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     re_path(r'^.*$', FrontendAppView.as_view()),
     path('api/emails/', include('email_handler.urls')),  # Email-related routes
     path('api/whatsapp/', include('whatsapp_handler.urls')),  # WhatsApp-related routes
