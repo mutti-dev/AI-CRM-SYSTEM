@@ -1,0 +1,48 @@
+.tasks {
+  padding: 20px;
+  background-color: #1a1a1a;
+  border-radius: 8px;
+  box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.tasks h2 {
+  text-align: center;
+  margin-bottom: 20px;
+  color: #333;
+}
+
+.task-card {
+  background-color: #282c34;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 20px;
+  box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.task-card h3 {
+  margin-bottom: 10px;
+  color: #0084ff;
+}
+
+.task-card p {
+  margin: 5px 0;
+  color: #f4f4f4;
+}
+
+.task-card h4 {
+  margin-top: 15px;
+  color: #333;
+}
+
+.task-card ul {
+  list-style: none;
+  padding: 0;
+}
+
+.task-card ul li {
+  margin-bottom: 10px;
+  padding: 10px;
+  background-color: #1a1a1a;
+  border-radius: 5px;
+}

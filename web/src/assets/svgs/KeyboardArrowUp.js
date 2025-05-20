@@ -1,0 +1,19 @@
+import * as React from "react";
+const KeyboardArrowUp = (props) => (
+  <svg
+    width="512px"
+    height="512px"
+    viewBox="0 0 512 512"
+    id="Layer_1"
+    style={{
+      enableBackground: "new 0 0 512 512",
+    }}
+    xmlSpace="preserve"
+    xmlns="http://www.w3.org/2000/svg"
+    xmlnsXlink="http://www.w3.org/1999/xlink"
+    {...props}
+  >
+    <path d="M341.8,50.9c113.3,47.7,166.5,178.3,118.7,291.6S282.2,508.9,168.9,461.2S2.5,282.9,50.3,169.6  C85,87.1,165.9,33.4,255.4,33.4C285.1,33.4,314.5,39.3,341.8,50.9z M63.4,255.4c0,106,86,192,192,192s192-86,192-192  s-86-192-192-192S63.4,149.4,63.4,255.4z M370.7,227.4L255.4,112.1L140.1,227.4l21.2,21.2l79.1-79.2v208.2h30V169.4l79.1,79.1  L370.7,227.4z" />
+  </svg>
+);
+export default KeyboardArrowUp;

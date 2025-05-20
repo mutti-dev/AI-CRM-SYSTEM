@@ -1,0 +1,87 @@
+/* MuiTable.css */
+.table-container {
+  background-color: #1a1a1a !important;
+  color: #ffffff !important;
+  border-radius: 8px !important;
+  border: 1px solid #2d2d2d !important;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1) !important;
+}
+
+.table-container .MuiTableCell-root {
+  color: #ffffff !important;
+  border-bottom: 1px solid #2d2d2d !important;
+}
+
+.table-container .MuiTableHead-root {
+  background-color: #2d2d2d !important;
+}
+
+.table-container .MuiTableRow-root:hover {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+.table-row {
+  cursor: pointer !important;
+  transition: background-color 0.2s ease !important;
+}
+
+.table-row:hover {
+  background-color: #2d2d2d !important;
+}
+
+.status-badge {
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: inline-block;
+}
+
+
+.filters-container {
+  display: flex;
+  gap: 16px;
+  padding: 16px;
+  background-color: #1a1a1a;
+  margin: 0 16px 16px;
+  border-radius: 8px;
+}
+
+.filters-container .MuiTextField-root {
+  background-color: #2d2d2d;
+  border-radius: 4px;
+}
+
+.filters-container .MuiOutlinedInput-root {
+  color: #fff;
+}
+
+.filters-container .MuiInputLabel-root {
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+
+.filters-container .MuiOutlinedInput-notchedOutline {
+  border-color: rgba(255, 255, 255, 0.3) !important;
+}
+
+.filters-container .MuiSelect-icon {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.filters-container .MuiMenuItem-root {
+  color: #fff;
+  background-color: #2d2d2d;
+}
+
+.filters-container .MuiMenuItem-root:hover {
+  background-color: #3d3d3d !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .filters-container {
+    flex-direction: column;
+  }
+}
